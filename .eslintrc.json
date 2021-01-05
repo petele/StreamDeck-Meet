@@ -1,0 +1,22 @@
+{
+  "parser": "@babel/eslint-parser",
+  "parserOptions": {
+    "sourceType": "module",
+
+    "babelOptions": {
+      "configFile": "./babel.config.json"
+    }
+  },
+  "extends": ["eslint:recommended", "google"],
+  "env": {
+    "browser": true,
+    "es2021": true
+  },
+  "rules": {
+    "no-prototype-builtins": 0,
+    "max-len": ["error", {"ignoreTemplateLiterals": true}]
+  },
+  "globals": {
+    "chrome": true
+  }
+}
