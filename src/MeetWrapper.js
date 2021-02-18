@@ -587,7 +587,7 @@ class MeetWrapper { // eslint-disable-line
     const panelElem = document.querySelector('[jsname=Yz8Ubc]');
     const userButton = document.querySelector('[data-tab-id="1"]');
 
-    if (panelElem && userButton.getAttribute('aria-selected') == 'true') {
+    if (panelElem && userButton.getAttribute('aria-expanded') == 'true') {
       this.#tapClosePanel();
     } else {
       userButton.click();
@@ -601,7 +601,7 @@ class MeetWrapper { // eslint-disable-line
     const panelElem = document.querySelector('[jsname=Yz8Ubc]');
     const chatButton = document.querySelector('[data-tab-id="2"]');
 
-    if (panelElem && chatButton.getAttribute('aria-selected') == 'true') {
+    if (panelElem && chatButton.getAttribute('aria-expanded') == 'true') {
       this.#tapClosePanel();
     } else {
       chatButton.click();
