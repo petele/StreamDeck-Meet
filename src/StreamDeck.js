@@ -23,16 +23,9 @@
  * @module StreamDeck
  */
 class StreamDeck { // eslint-disable-line
-  #OFFSET = 4;
-  #NUM_KEYS = 15;
-  #ICON_SIZE = 72;
-  #ICON_SIZE_HALF = this.#ICON_SIZE / 2;
-
-  #PACKET_SIZE = 1024;
-  #PACKET_HEADER_LENGTH = 8;
-  #MAX_PAYLOAD_LENGTH = this.#PACKET_SIZE - this.#PACKET_HEADER_LENGTH;
 
   #device;
+  #deviceType;
   #keyState;
   #isSupported = false;
 
@@ -106,6 +99,18 @@ class StreamDeck { // eslint-disable-line
     if (!this.#device) {
       return false;
     }
+    switch (this.#device.productId) {
+      case StreamDeckMini.PRODUCT_ID:
+        this.#deviceType = new StreamDeckMini();
+        break;
+      case StreamDeckV2.PRODUCT_ID:
+        this.#deviceType = new StreamDeckV2();
+        break;
+      default:
+        console.warn("StreamDeck product ID", this.#device.productId, "is not tested");
+        this.#deviceType = new StreamDeckV2();
+        break;
+    }
     if (this.#device.opened) {
       return true;
     }
@@ -113,7 +118,7 @@ class StreamDeck { // eslint-disable-line
     await this.#device.open();
 
     // Initialize the KeyState oobject
-    this.#keyState = new Array(this.#NUM_KEYS).fill(false);
+    this.#keyState = new Array(this.#deviceType.NUM_KEYS).fill(false);
 
     // Add event listener for key presses.
     this.#device.addEventListener('inputreport', (event) => {
@@ -140,6 +145,15 @@ class StreamDeck { // eslint-disable-line
   }
 
   /**
+   * Get the button Id (key number) for a button name.
+   * @param {string} name The name of the button.
+   * @return {number} The number of the button.
+   */
+  buttonNameToId(name) {
+    return this.#deviceType.buttonNameToIdMap[name];
+  }
+
+  /**
    * Get a StreamDeck device.
    * @param {boolean} showPicker Show the picker if no device is found.
    * @return {Promise<HIDDevice>} StreamDeck HID device.
@@ -150,7 +164,12 @@ class StreamDeck { // eslint-disable-line
       return previousDevice;
     }
     if (showPicker) {
-      const opts = {filters: [{vendorId: 0x0fd9, productId: 0x006d}]};
+      const opts = {filters: [
+        {vendorId: 0x0fd9, productId: 0x0060},  // Original
+        {vendorId: 0x0fd9, productId: StreamDeckMini.PRODUCT_ID},  // Mini
+        {vendorId: 0x0fd9, productId: 0x006c},  // XL
+        {vendorId: 0x0fd9, productId: StreamDeckV2.PRODUCT_ID}  // V2
+      ]};
       const devices = await navigator.hid.requestDevice(opts);
       return devices[0];
     }
@@ -165,8 +184,13 @@ class StreamDeck { // eslint-disable-line
   async #getPreviousDevice() {
     const devices = await navigator.hid.getDevices();
     for (const device of devices) {
-      if (device.vendorId === 0x0fd9 && device.productId === 0x006d) {
-        return device;
+      if (device.vendorId === 0x0fd9) {
+        if (device.productId === 0x0060 ||
+            device.productId === StreamDeckMini.PRODUCT_ID ||
+            device.productId === 0x006c ||
+            device.productId === StreamDeckV2.PRODUCT_ID) {
+          return device;
+        }
       }
     }
     return null;
@@ -182,8 +206,8 @@ class StreamDeck { // eslint-disable-line
    */
   #onButtonPushed(buffer) {
     const keys = new Int8Array(buffer);
-    const start = this.#OFFSET - 1;
-    const end = this.#NUM_KEYS + this.#OFFSET - 1;
+    const start = this.#deviceType.OFFSET - 1;
+    const end = this.#deviceType.NUM_KEYS + this.#deviceType.OFFSET - 1;
     const data = Array.from(keys).slice(start, end);
     data.forEach((item, keyIndex) => {
       const keyPressed = data[keyIndex] === 1;
@@ -193,7 +217,7 @@ class StreamDeck { // eslint-disable-line
       }
       this.#keyState[keyIndex] = keyPressed;
       const details = {
-        buttonId: keyIndex,
+        buttonId: keyIndex + this.#deviceType.ID_OFFSET,
         pushed: keyPressed,
         buttonStates: this.#keyState.slice(),
       };
@@ -210,8 +234,7 @@ class StreamDeck { // eslint-disable-line
    */
   setBrightness(percentage) {
     this.#readyOrThrow();
-    const data = new Uint8Array([0x08, percentage]);
-    return this.#device.sendFeatureReport(0x03, data);
+    return this.#deviceType.setBrightness(this.#device, percentage);
   }
 
   /**
@@ -255,8 +278,7 @@ class StreamDeck { // eslint-disable-line
    */
   async reset() {
     this.#readyOrThrow();
-    const data = new Uint8Array([0x02]);
-    return this.#device.sendFeatureReport(0x03, data);
+    return this.#deviceType.reset(this.#device);
   }
 
   /**
@@ -275,7 +297,7 @@ class StreamDeck { // eslint-disable-line
   async clearAllButtons() {
     this.#readyOrThrow();
     const results = [];
-    for (let i = 0; i < this.#NUM_KEYS; i++) {
+    for (let i = 0; i < this.#deviceType.NUM_KEYS; i++) {
       results.push(this.fillColor(i, '#000000', true));
     }
     return Promise.all(results);
@@ -320,10 +342,10 @@ class StreamDeck { // eslint-disable-line
     if (cache && this.#imageCache[color]) {
       return this.#sendBuffer(buttonId, this.#imageCache[color]);
     }
-    const canvas = new OffscreenCanvas(this.#ICON_SIZE, this.#ICON_SIZE);
+    const canvas = new OffscreenCanvas(this.#deviceType.ICON_SIZE, this.#deviceType.ICON_SIZE);
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = color;
-    ctx.fillRect(0, 0, this.#ICON_SIZE, this.#ICON_SIZE);
+    ctx.fillRect(0, 0, this.#deviceType.ICON_SIZE, this.#deviceType.ICON_SIZE);
     const buffer = await this.#getImageBufferFromCanvas(canvas);
     const result = this.#sendBuffer(buttonId, buffer);
     if (cache) {
@@ -362,9 +384,7 @@ class StreamDeck { // eslint-disable-line
    * @return {Promise<ArrayBuffer>}
    */
   async #getImageBufferFromCanvas(canvas) {
-    const blob = await canvas.convertToBlob({type: 'image/jpeg', quality: 1.0});
-    const buff = await blob.arrayBuffer();
-    return buff;
+    return this.#deviceType.getImageBufferFromCanvas(canvas);
   }
 
   /**
@@ -377,14 +397,14 @@ class StreamDeck { // eslint-disable-line
     const img = await this.#loadImageFromURL(url);
     const imgWidth = img.width;
     const imgHeight = img.height;
-    const canvas = new OffscreenCanvas(this.#ICON_SIZE, this.#ICON_SIZE);
+    const canvas = new OffscreenCanvas(this.#deviceType.ICON_SIZE, this.#deviceType.ICON_SIZE);
     const ctx = canvas.getContext('2d');
-    ctx.translate(this.#ICON_SIZE_HALF, this.#ICON_SIZE_HALF);
-    ctx.rotate(180 * Math.PI / 180);
-    ctx.translate(this.#ICON_SIZE_HALF * -1, this.#ICON_SIZE_HALF * -1);
+    ctx.translate(this.#deviceType.ICON_SIZE_HALF, this.#deviceType.ICON_SIZE_HALF);
+    ctx.rotate(this.#deviceType.IMAGE_ROTATION * Math.PI / 180);
+    ctx.translate(this.#deviceType.ICON_SIZE_HALF * -1, this.#deviceType.ICON_SIZE_HALF * -1);
     ctx.drawImage(img,
         0, 0, imgWidth, imgHeight,
-        0, 0, this.#ICON_SIZE, this.#ICON_SIZE);
+        0, 0, this.#deviceType.ICON_SIZE, this.#deviceType.ICON_SIZE);
     return this.#getImageBufferFromCanvas(canvas);
   }
 
@@ -427,35 +447,7 @@ class StreamDeck { // eslint-disable-line
    * @return {!array}
    */
   #getPacketsFromBuffer(buttonId, buffer) {
-    const packets = [];
-
-    let page = 0;
-    let start = 0;
-    let bytesRemaining = buffer.byteLength;
-
-    while (bytesRemaining > 0) {
-      const byteCount = Math.min(bytesRemaining, this.#MAX_PAYLOAD_LENGTH);
-      const isLastPacket = bytesRemaining <= this.#MAX_PAYLOAD_LENGTH;
-      const header = new ArrayBuffer(8);
-      new DataView(header).setUint8(0, 0x02); // report ID
-      new DataView(header).setUint8(1, 0x07); // always 7 - set the icon
-      new DataView(header).setUint8(2, buttonId); // button
-      new DataView(header).setUint8(3, isLastPacket ? 1 : 0); // is last packet
-      new DataView(header).setUint16(4, byteCount, true);
-      new DataView(header).setUint16(6, page++, true);
-
-      const end = start + byteCount;
-      const packet = new Uint8Array(this.#PACKET_SIZE);
-      packet.set(new Uint8Array(header));
-      packet.set(new Uint8Array(buffer.slice(start, end)),
-          this.#PACKET_HEADER_LENGTH);
-
-      start = end;
-      bytesRemaining = bytesRemaining - byteCount;
-
-      packets.push(packet);
-    }
-    return packets;
+    return this.#deviceType.getPacketsFromBuffer(buttonId, buffer);
   }
 
   /**

@@ -7,8 +7,11 @@
     {
       "matches": ["https://meet.google.com/*"],
       "js": [
+        "CanvasToBMP.js",
         "HueLights.js",
         "StreamDeck.js",
+        "StreamDeckMini.js",
+        "StreamDeckV2.js",
         "MeetWrapper.js",
         "main.js"
       ]
