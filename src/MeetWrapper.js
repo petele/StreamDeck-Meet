@@ -102,8 +102,8 @@ class MeetWrapper { // eslint-disable-line
 
     this.#resetButtons();
     this.#drawHueButtons();
-    this.#drawButton(5, `start-next`);
-    this.#drawButton(6, `start-instant`);
+    this.#drawButton(`start-next`);
+    this.#drawButton(`start-instant`);
 
     if (this.#hueLights?.auto) {
       this.#hueLights.on(false);
@@ -122,7 +122,7 @@ class MeetWrapper { // eslint-disable-line
 
     this.#resetButtons();
     this.#drawHueButtons();
-    this.#drawButton(5, `enter-meeting`);
+    this.#drawButton(`enter-meeting`);
     this.#updateIsMicMuted();
     this.#updateIsCamMuted();
 
@@ -190,7 +190,7 @@ class MeetWrapper { // eslint-disable-line
     this.#updateIsCamMuted();
     this.#updateHandState();
     this.#updateCCState();
-    this.#drawButton(14, `end-call`);
+    this.#drawButton(`end-call`);
 
     if (this.#hueLights?.auto) {
       this.#hueLights.on(false);
@@ -209,8 +209,8 @@ class MeetWrapper { // eslint-disable-line
 
     this.#resetButtons();
     this.#drawHueButtons();
-    this.#drawButton(10, `rejoin`);
-    this.#drawButton(14, `home`);
+    this.#drawButton(`rejoin`);
+    this.#drawButton(`home`);
 
     if (this.#hueLights?.auto) {
       this.#hueLights.on(false);
@@ -230,59 +230,59 @@ class MeetWrapper { // eslint-disable-line
    * @param {number} buttonId Button ID of the button that was pressed.
    */
   #handleStreamDeckPress(buttonId) {
-    if (buttonId === 3) {
+    if (buttonId === this.#streamDeck.buttonNameToId('light-on')) {
       this.#hueLights.on(true);
       return;
-    } else if (buttonId === 4) {
+    } else if (buttonId === this.#streamDeck.buttonNameToId('light-off')) {
       this.#hueLights.on(false);
       return;
     }
 
     if (this.#currentRoom === this.#ROOM_NAMES.lobby) {
-      if (buttonId === 5) {
+      if (buttonId === this.#streamDeck.buttonNameToId('start-next')) {
         this.#tapStartNextMeeting();
-      } else if (buttonId === 6) {
+      } else if (buttonId === this.#streamDeck.buttonNameToId('start-instant')) {
         this.#tapStartInstantMeeting();
       }
       return;
     }
 
     if (this.#currentRoom === this.#ROOM_NAMES.greenRoom) {
-      if (buttonId === 5) {
+      if (buttonId === this.#streamDeck.buttonNameToId('enter-meeting')) {
         this.#tapEnterMeeting();
-      } else if (buttonId === 10) {
+      } else if (buttonId === this.#streamDeck.buttonNameToId('mic')) {
         this.#tapMic();
-      } else if (buttonId === 11) {
+      } else if (buttonId === this.#streamDeck.buttonNameToId('cam')) {
         this.#tapCam();
       }
       return;
     }
 
     if (this.#currentRoom === this.#ROOM_NAMES.meeting) {
-      if (buttonId === 5) {
+      if (buttonId === this.#streamDeck.buttonNameToId('users')) {
         this.#tapUsers();
-      } else if (buttonId === 6) {
+      } else if (buttonId === this.#streamDeck.buttonNameToId('chat')) {
         this.#tapChat();
-      } else if (buttonId === 7) {
+      } else if (buttonId === this.#streamDeck.buttonNameToId('present-stop')) {
         this.#tapStopPresenting();
-      } else if (buttonId === 10) {
+      } else if (buttonId === this.#streamDeck.buttonNameToId('mic')) {
         this.#tapMic();
-      } else if (buttonId === 11) {
+      } else if (buttonId === this.#streamDeck.buttonNameToId('cam')) {
         this.#tapCam();
-      } else if (buttonId === 12) {
+      } else if (buttonId === this.#streamDeck.buttonNameToId('hand')) {
         this.#tapHand();
-      } else if (buttonId === 13) {
+      } else if (buttonId === this.#streamDeck.buttonNameToId('cc')) {
         this.#tapCC();
-      } else if (buttonId === 14) {
+      } else if (buttonId === this.#streamDeck.buttonNameToId('end-call')) {
         this.#tapHangUp();
       }
       return;
     }
 
     if (this.#currentRoom === this.#ROOM_NAMES.exitHall) {
-      if (buttonId === 10) {
+      if (buttonId === this.#streamDeck.buttonNameToId('rejoin')) {
         this.#tapRejoin();
-      } else if (buttonId === 14) {
+      } else if (buttonId === this.#streamDeck.buttonNameToId('home')) {
         this.#tapHome();
       }
       return;
@@ -297,14 +297,18 @@ class MeetWrapper { // eslint-disable-line
    */
 
   /**
-   * Draw an icon on the StreamDeck in the specified location.
+   * Draw an icon on the StreamDeck. Uses the current configuration to
+   * determine which button to use based on the icon name.
    *
-   * @param {number} buttonId Button index to draw icon on
    * @param {string} iconName Name of icon to draw
    */
-  #drawButton(buttonId, iconName) {
+  #drawButton(iconName) {
     if (!this.#streamDeck?.isConnected) {
       return;
+    }
+    const buttonId = this.#streamDeck.buttonNameToId(iconName);
+    if (buttonId < 0) {
+      return;  // Not defined in the current configuration.
     }
     const iconURL = chrome.runtime.getURL(`ico-svg/${iconName}.svg`);
     this.#streamDeck.fillURL(buttonId, iconURL, true);
@@ -330,8 +334,8 @@ class MeetWrapper { // eslint-disable-line
     if (!this.#hueLights) {
       return;
     }
-    this.#drawButton(3, `light-on`);
-    this.#drawButton(4, `light-off`);
+    this.#drawButton(`light-on`);
+    this.#drawButton(`light-off`);
   }
 
 
@@ -384,7 +388,7 @@ class MeetWrapper { // eslint-disable-line
     }
     this.#isPresenting = newVal;
     const icon = newVal ? 'present-stop' : 'blank';
-    this.#drawButton(7, icon);
+    this.#drawButton(icon);
   }
 
   /**
@@ -395,7 +399,7 @@ class MeetWrapper { // eslint-disable-line
     const newVal = button?.dataset?.isMuted == 'true';
     if (button) {
       const img = newVal ? 'mic-disabled' : 'mic';
-      this.#drawButton(10, img);
+      this.#drawButton(img);
     }
   }
 
@@ -406,7 +410,7 @@ class MeetWrapper { // eslint-disable-line
     const button = this.#getCamButton();
     if (button) {
       const img = button.dataset.isMuted == 'true' ? 'cam-disabled' : 'cam';
-      this.#drawButton(11, img);
+      this.#drawButton(img);
     }
   }
 
@@ -417,7 +421,7 @@ class MeetWrapper { // eslint-disable-line
     const elem = this.#getHandButton();
     if (elem) {
       const img = elem.classList.contains('SNTzF') ? 'hand-raised' : 'hand';
-      this.#drawButton(12, img);
+      this.#drawButton(img);
     }
   }
 
@@ -428,7 +432,7 @@ class MeetWrapper { // eslint-disable-line
     const elem = this.#getCCButton();
     if (elem) {
       const img = elem.classList.contains('o7y9G') ? 'cc-on' : 'cc';
-      this.#drawButton(13, img);
+      this.#drawButton(img);
     }
   }
 
@@ -442,10 +446,10 @@ class MeetWrapper { // eslint-disable-line
     const selectedId = selected?.getAttribute('data-tab-id');
 
     const userIcon = selectedId == '1' ? 'users-open' : 'users';
-    this.#drawButton(5, userIcon);
+    this.#drawButton(userIcon);
 
     const chatIcon = selectedId == '2' ? 'chat-open' : 'chat';
-    this.#drawButton(6, chatIcon);
+    this.#drawButton(chatIcon);
   }
 
 
