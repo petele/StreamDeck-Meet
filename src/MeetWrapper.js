@@ -18,17 +18,8 @@
 
 'use strict';
 
-/**
- *
- * @module MeetWrapper
- */
 class MeetWrapper { // eslint-disable-line
   #currentRoom;
-  #isPresenting = false;
-  #isSidePanelVisible = false;
-
-  #ccButtonReady = false;
-  #handButtonReady = false;
 
   #ROOM_NAMES = {
     lobby: 'lobby',
@@ -63,35 +54,24 @@ class MeetWrapper { // eslint-disable-line
     const bodyObserver = new MutationObserver(() => {
       if (document.querySelector('div[data-second-screen]')) {
         this.#enterMeeting();
-      } else if (document.querySelector('.KWIIWd')) {
+      } else if (document.querySelector('[jscontroller=dyDNGc]')) {
         this.#enterGreenRoom();
-      } else if (document.querySelector('.CRFCdf')) {
+      } else if (document.querySelector('[jsname=r4nke]')) {
         this.#enterExitHall();
       }
-      this.#updateIsPresenting();
     });
     bodyObserver.observe(document.body, {attributes: true, childList: true});
-
-    const muteObserver = new MutationObserver(async () => {
-      await this.#updateIsMicMuted();
-      await this.#updateIsCamMuted();
-    });
-    const muteMutationOpts = {
-      attributeFilter: ['data-is-muted'],
-      subtree: true,
-    };
-    muteObserver.observe(document.body, muteMutationOpts);
   }
 
 
-  /**
+  /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
    *
-   * Methods to setup rooms
+   * Methods for setting up the rooms.
    *
    */
 
   /**
-   * Method called when the user enters the Lobby
+   * Set up buttons for the lobby.
    */
   #enterLobby() {
     if (this.#currentRoom === this.#ROOM_NAMES.lobby) {
@@ -111,7 +91,7 @@ class MeetWrapper { // eslint-disable-line
   }
 
   /**
-   * Method called when the user enters the Green Room
+   * Set up buttons for the green room.
    */
   #enterGreenRoom() {
     if (this.#currentRoom === this.#ROOM_NAMES.greenRoom) {
@@ -123,16 +103,23 @@ class MeetWrapper { // eslint-disable-line
     this.#resetButtons();
     this.#drawHueButtons();
     this.#drawButton(`enter-meeting`);
-    this.#updateIsMicMuted();
-    this.#updateIsCamMuted();
+    this.#drawButton(`home`);
+
+    // The timeout is there to make sure the elements have drawn on
+    // screen. I should probably use a mutation observer to see when they
+    // drawn, then render them, but I'm feeling kinda lazy today.
+    setTimeout(() => {
+      this.#setupGreenRoomMicButton();
+      this.#setupGreenRoomCamButton();
+    }, 500);
 
     if (this.#hueLights?.auto) {
-      this.#hueLights.on(false);
+      this.#hueLights.on(true);
     }
   }
 
   /**
-   * Method called when the user joins a meeting
+   * Set up buttons for the meeting room.
    */
   #enterMeeting() {
     if (this.#currentRoom === this.#ROOM_NAMES.meeting) {
@@ -141,64 +128,38 @@ class MeetWrapper { // eslint-disable-line
     this.#currentRoom = this.#ROOM_NAMES.meeting;
     console.log('-ENTER-', this.#currentRoom);
 
-    const statusBarObserver = new MutationObserver((list) => {
-      for (const change of list) {
-        if (change.type === 'childList' && change.addedNodes.length > 0) {
-          if (!this.#handButtonReady && this.#getHandButton()) {
-            this.#setupHandButton();
-          }
-          if (!this.#ccButtonReady && this.#getCCButton()) {
-            this.#setupCCButton();
-          }
-        }
-      }
-    });
-    const statusBarMOOpts = {subtree: true, childList: true};
-    statusBarObserver.observe(this.#getStatusBar(), statusBarMOOpts);
-
-    const selectedPanelObserver = new MutationObserver(() => {
-      this.#updateSidePanel();
-    });
-    const selectedPanelMOOpts = {
-      attributeFilter: ['aria-selected'],
-      subtree: true,
-    };
-
-    const sidePanelObserver = new MutationObserver(() => {
-      const picker = document.querySelector('[jsname=I0Fcpe]');
-      const newVal = picker ? true : false;
-      if (this.#isSidePanelVisible === newVal) {
-        return;
-      }
-      this.#isSidePanelVisible = newVal;
-      this.#updateSidePanel();
-      if (newVal) {
-        selectedPanelObserver.observe(picker, selectedPanelMOOpts);
-      }
-    });
-    const sidePanelMOOpts = {
-      childList: true,
-      attributeFilter: ['aria-selected'],
-    };
-    const sidePanelElem = document.querySelector('[jsname=o4MlPd]');
-    sidePanelObserver.observe(sidePanelElem, sidePanelMOOpts);
-
     this.#resetButtons();
     this.#drawHueButtons();
-    this.#updateSidePanel();
-    this.#updateIsMicMuted();
-    this.#updateIsCamMuted();
-    this.#updateHandState();
-    this.#updateCCState();
     this.#drawButton(`end-call`);
 
+    // The timeout is there to make sure the elements have drawn on
+    // screen. I should probably use a mutation observer to see when they
+    // drawn, then render them, but I'm feeling kinda lazy today.
+    setTimeout(() => {
+      this.#setupMicButton();
+      this.#setupCamButton();
+      this.#setupCCButton();
+      this.#setupHandButton();
+      this.#setupInfoButton();
+      this.#setupPeopleButton();
+      this.#setupChatButton();
+      this.#setupActivitiesButton();
+      this.#setupPresentingButton();
+    }, 500);
+
+    // If it was an instant meeting, automatically close
+    // the info dialog after 10 seconds.
+    setTimeout(() => {
+      this.#tapCloseInfoDialog();
+    }, 10 * 1000);
+
     if (this.#hueLights?.auto) {
-      this.#hueLights.on(false);
+      this.#hueLights.on(true);
     }
   }
 
   /**
-   * Method called when the user leaves a meeting
+   * Set up buttons for the exit hall.
    */
   #enterExitHall() {
     if (this.#currentRoom === this.#ROOM_NAMES.exitHall) {
@@ -218,9 +179,9 @@ class MeetWrapper { // eslint-disable-line
   }
 
 
-  /**
+  /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
    *
-   * Helper methods to handle StreamDeck events.
+   * Methods for interacting with the Stream Deck.
    *
    */
 
@@ -230,14 +191,19 @@ class MeetWrapper { // eslint-disable-line
    * @param {number} buttonId Button ID of the button that was pressed.
    */
   #handleStreamDeckPress(buttonId) {
-    if (buttonId === this.#streamDeck.buttonNameToId('light-on')) {
-      this.#hueLights.on(true);
-      return;
-    } else if (buttonId === this.#streamDeck.buttonNameToId('light-off')) {
-      this.#hueLights.on(false);
-      return;
+    // Hue light buttons, used in all rooms.
+    if (this.#hueLights) {
+      if (buttonId === this.#streamDeck.buttonNameToId('light-on')) {
+        this.#hueLights.on(true);
+        return;
+      }
+      if (buttonId === this.#streamDeck.buttonNameToId('light-off')) {
+        this.#hueLights.on(true);
+        return;
+      }
     }
 
+    // Available while in the lobby.
     if (this.#currentRoom === this.#ROOM_NAMES.lobby) {
       if (buttonId === this.#streamDeck.buttonNameToId('start-next')) {
         this.#tapStartNextMeeting();
@@ -247,22 +213,31 @@ class MeetWrapper { // eslint-disable-line
       return;
     }
 
+    // Available while in the green room.
     if (this.#currentRoom === this.#ROOM_NAMES.greenRoom) {
       if (buttonId === this.#streamDeck.buttonNameToId('enter-meeting')) {
         this.#tapEnterMeeting();
       } else if (buttonId === this.#streamDeck.buttonNameToId('mic')) {
-        this.#tapMic();
+        this.#tapGreenRoomMic();
       } else if (buttonId === this.#streamDeck.buttonNameToId('cam')) {
-        this.#tapCam();
+        this.#tapGreenRoomCam();
+      } else if (buttonId === this.#streamDeck.buttonNameToId('home')) {
+        this.#resetButtons();
+        window.history.back();
       }
       return;
     }
 
+    // Available while in the meeting room.
     if (this.#currentRoom === this.#ROOM_NAMES.meeting) {
-      if (buttonId === this.#streamDeck.buttonNameToId('users')) {
+      if (buttonId === this.#streamDeck.buttonNameToId('info')) {
+        this.#tapInfo();
+      } else if (buttonId === this.#streamDeck.buttonNameToId('users')) {
         this.#tapUsers();
       } else if (buttonId === this.#streamDeck.buttonNameToId('chat')) {
         this.#tapChat();
+      } else if (buttonId === this.#streamDeck.buttonNameToId('activities')) {
+        this.#tapActivities();
       } else if (buttonId === this.#streamDeck.buttonNameToId('present-stop')) {
         this.#tapStopPresenting();
       } else if (buttonId === this.#streamDeck.buttonNameToId('mic')) {
@@ -274,27 +249,23 @@ class MeetWrapper { // eslint-disable-line
       } else if (buttonId === this.#streamDeck.buttonNameToId('cc')) {
         this.#tapCC();
       } else if (buttonId === this.#streamDeck.buttonNameToId('end-call')) {
+        this.#resetButtons();
         this.#tapHangUp();
       }
       return;
     }
 
+    // Available while in the exit hall.
     if (this.#currentRoom === this.#ROOM_NAMES.exitHall) {
       if (buttonId === this.#streamDeck.buttonNameToId('rejoin')) {
         this.#tapRejoin();
       } else if (buttonId === this.#streamDeck.buttonNameToId('home')) {
+        this.#resetButtons();
         this.#tapHome();
       }
       return;
     }
   }
-
-
-  /**
-   *
-   * Helper methods for drawing icons on the StreamDeck buttons
-   *
-   */
 
   /**
    * Draw an icon on the StreamDeck. Uses the current configuration to
@@ -307,7 +278,8 @@ class MeetWrapper { // eslint-disable-line
       return;
     }
     const buttonId = this.#streamDeck.buttonNameToId(iconName);
-    if (buttonId < 0) {
+    if (buttonId === undefined || buttonId < 0) {
+      console.warn(`drawButton failed, unknown icon name: '${iconName}'`);
       return; // Not defined in the current configuration.
     }
     const iconURL = chrome.runtime.getURL(`ico-svg/${iconName}.svg`);
@@ -325,12 +297,9 @@ class MeetWrapper { // eslint-disable-line
   }
 
   /**
-   * If Hue is available, draw the Hue buttons.
+   * Draw buttons for Hue
    */
   #drawHueButtons() {
-    if (!this.#streamDeck?.isConnected) {
-      return;
-    }
     if (!this.#hueLights) {
       return;
     }
@@ -339,222 +308,589 @@ class MeetWrapper { // eslint-disable-line
   }
 
 
-  /**
+  /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
    *
-   * TODO.
-   *
-   */
-
-  /**
-   * Setup the Hand Raised button.
-   */
-  #setupHandButton() {
-    this.#handButtonReady = true;
-    const handObserver = new MutationObserver(() => {
-      this.#updateHandState();
-    });
-    const handButton = this.#getHandButton();
-    handObserver.observe(handButton, {attributeFilter: ['class']});
-    this.#updateHandState();
-  }
-
-  /**
-   * Setup the Closed Caption button.
-   */
-  #setupCCButton() {
-    this.#ccButtonReady = true;
-    const ccObserver = new MutationObserver(() => {
-      this.#updateCCState();
-    });
-    const ccButton = this.#getCCButton();
-    ccObserver.observe(ccButton, {attributeFilter: ['class']});
-    this.#updateCCState();
-  }
-
-
-  /**
-   *
-   * Helper methods that check the state of the meeting and update buttons.
+   * Set up mutation observers on the buttons in the meeting room.
    *
    */
 
   /**
-    * Add/remove the Stop Presenting button.
-    */
-  #updateIsPresenting() {
-    const newVal = this.#getStopPresentingButton() ? true : false;
-    if (this.#isPresenting === newVal) {
+   * Setup the meeting room mic button.
+   */
+  #setupMicButton() {
+    const micButton = this.#getMicButton();
+    if (!micButton) {
       return;
     }
-    this.#isPresenting = newVal;
-    const icon = newVal ? 'present-stop' : 'blank';
-    this.#drawButton(icon);
+    const micObserver = new MutationObserver(() => {
+      this.#updateMicButton();
+    });
+    micObserver.observe(micButton, {attributeFilter: ['data-is-muted']});
+    this.#updateMicButton();
   }
 
   /**
-   * Update the mic muted/unmuted button.
+   * Setup the meeting room camera button.
    */
-  async #updateIsMicMuted() {
+  #setupCamButton() {
+    const camButton = this.#getCamButton();
+    if (!camButton) {
+      return;
+    }
+    const camObserver = new MutationObserver(() => {
+      this.#updateCamButton();
+    });
+    camObserver.observe(camButton, {attributeFilter: ['data-is-muted']});
+    this.#updateCamButton();
+  }
+
+  /**
+   * Setup the meeting room closed caption button.
+   */
+  #setupCCButton() {
+    const ccButton = this.#getCCButton();
+    if (!ccButton) {
+      return;
+    }
+    const ccObserver = new MutationObserver(() => {
+      this.#updateCCButton();
+    });
+    ccObserver.observe(ccButton, {attributeFilter: ['aria-pressed']});
+    this.#updateCCButton();
+  }
+
+  /**
+   * Setup the meeting room raise hand button.
+   */
+  #setupHandButton() {
+    const handButton = this.#getHandButton();
+    if (!handButton) {
+      return;
+    }
+    const handObserver = new MutationObserver(() => {
+      this.#updateHandButton();
+    });
+    handObserver.observe(handButton, {attributeFilter: ['aria-pressed']});
+    this.#updateHandButton();
+  }
+
+  /**
+   * Setup the meeting room info button.
+   */
+  #setupInfoButton() {
+    const infoButton = this.#getInfoButton();
+    if (!infoButton) {
+      return;
+    }
+    const infoObserver = new MutationObserver(() => {
+      this.#updateInfoButton();
+    });
+    infoObserver.observe(infoButton, {attributeFilter: ['aria-pressed']});
+    this.#updateInfoButton();
+  }
+
+  /**
+   * Setup the meeting room people list button.
+   */
+  #setupPeopleButton() {
+    const button = this.#getPeopleButton();
+    if (!button) {
+      return;
+    }
+    const observer = new MutationObserver(() => {
+      this.#updatePeopleButton();
+    });
+    observer.observe(button, {attributeFilter: ['aria-pressed']});
+    this.#updatePeopleButton();
+  }
+
+  /**
+   * Setup the meeting room chat button.
+   */
+  #setupChatButton() {
+    const button = this.#getChatButton();
+    if (!button) {
+      return;
+    }
+    const observer = new MutationObserver(() => {
+      this.#updateChatButton();
+    });
+    observer.observe(button, {attributeFilter: ['aria-pressed']});
+    this.#updateChatButton();
+  }
+
+  /**
+   * Setup the meeting room activities button.
+   */
+  #setupActivitiesButton() {
+    const button = this.#getActivitiesButton();
+    if (!button) {
+      return;
+    }
+    const observer = new MutationObserver(() => {
+      this.#updateActivitiesButton();
+    });
+    observer.observe(button, {attributeFilter: ['aria-pressed']});
+    this.#updateActivitiesButton();
+  }
+
+  /**
+   * Setup the meeting room presenting state button.
+   */
+  #setupPresentingButton() {
+    const presentationBar = this.#getPresentationBar();
+    if (!presentationBar) {
+      return;
+    }
+    const observer = new MutationObserver(() => {
+      this.#updatePresentingButton();
+    });
+    observer.observe(presentationBar, {childList: true});
+    this.#updatePresentingButton();
+  }
+
+  /**
+   * Setup the green room mic button.
+   */
+  #setupGreenRoomMicButton() {
+    const button = this.#getGreenRoomMicButton();
+    if (!button) {
+      return;
+    }
+    const observer = new MutationObserver(() => {
+      this.#updateGreenRoomMicButton();
+    });
+    observer.observe(button, {attributeFilter: ['data-is-muted']});
+    this.#updateGreenRoomMicButton();
+  }
+
+  /**
+   * Setup the green room camera button.
+   */
+  #setupGreenRoomCamButton() {
+    const button = this.#getGreenRoomCamButton();
+    if (!button) {
+      return;
+    }
+    const observer = new MutationObserver(() => {
+      this.#updateGreenRoomCamButton();
+    });
+    observer.observe(button, {attributeFilter: ['data-is-muted']});
+    this.#updateGreenRoomCamButton();
+  }
+
+
+  /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+   *
+   * Update the StreamDeck buttons based on current state. Will be
+   * called by the mutation observers created above.
+   *
+   */
+
+  /**
+   * Update the StreamDeck mic button to indicate current state.
+   */
+  #updateMicButton() {
     const button = this.#getMicButton();
-    const newVal = button?.dataset?.isMuted == 'true';
-    if (button) {
-      const img = newVal ? 'mic-disabled' : 'mic';
-      this.#drawButton(img);
+    if (!button) {
+      return;
     }
+    const newVal = button.dataset?.isMuted == 'true';
+    const img = newVal ? 'mic-disabled' : 'mic';
+    this.#drawButton(img);
   }
 
   /**
-   * Update the camera enabled/disabled button.
+   * Update the StreamDeck camera button to indicate current state.
    */
-  async #updateIsCamMuted() {
+  #updateCamButton() {
     const button = this.#getCamButton();
-    if (button) {
-      const img = button.dataset.isMuted == 'true' ? 'cam-disabled' : 'cam';
-      this.#drawButton(img);
+    if (!button) {
+      return;
     }
+    const newVal = button.dataset?.isMuted == 'true';
+    const img = newVal ? 'cam-disabled' : 'cam';
+    this.#drawButton(img);
   }
 
   /**
-   * Update the hand raised button when the hand is raised/lowered.
+   * Update the StreamDeck CC button to indicate current state.
    */
-  async #updateHandState() {
-    const elem = this.#getHandButton();
-    if (elem) {
-      const img = elem.classList.contains('SNTzF') ? 'hand-raised' : 'hand';
-      this.#drawButton(img);
+  #updateCCButton() {
+    const button = this.#getCCButton();
+    if (!button) {
+      return;
     }
+    const newVal = button.getAttribute('aria-pressed') == 'true';
+    const img = newVal ? 'cc-on' : 'cc';
+    this.#drawButton(img);
   }
 
   /**
-   * Update the closed caption button when CC are toggled.
+   * Update the StreamDeck hand button to indicate current state.
    */
-  async #updateCCState() {
-    const elem = this.#getCCButton();
-    if (elem) {
-      const img = elem.classList.contains('o7y9G') ? 'cc-on' : 'cc';
-      this.#drawButton(img);
+  #updateHandButton() {
+    const button = this.#getHandButton();
+    if (!button) {
+      return;
     }
+    const newVal = button.getAttribute('aria-pressed') == 'true';
+    const img = newVal ? 'hand-raised' : 'hand';
+    this.#drawButton(img);
   }
 
   /**
-   * Update the Chat and Attendees buttons when the panel is toggled.
+   * Update the StreamDeck info button to indicate current state.
    */
-  #updateSidePanel() {
-    const picker = document.querySelector('[jsname=I0Fcpe]');
+  #updateInfoButton() {
+    const button = this.#getInfoButton();
+    if (!button) {
+      return;
+    }
+    const newVal = button.getAttribute('aria-pressed') == 'true';
+    const img = newVal ? 'info-open' : 'info';
+    this.#drawButton(img);
+  }
 
-    const selected = picker?.querySelector('[aria-selected=true]');
-    const selectedId = selected?.getAttribute('data-tab-id');
+  /**
+   * Update the StreamDeck people button to indicate current state.
+   */
+  #updatePeopleButton() {
+    const button = this.#getPeopleButton();
+    if (!button) {
+      return;
+    }
+    const newVal = button.getAttribute('aria-pressed') == 'true';
+    const img = newVal ? 'users-open' : 'users';
+    this.#drawButton(img);
+  }
 
-    const userIcon = selectedId == '1' ? 'users-open' : 'users';
-    this.#drawButton(userIcon);
+  /**
+   * Update the StreamDeck chat button to indicate current state.
+   */
+  #updateChatButton() {
+    const button = this.#getChatButton();
+    if (!button) {
+      return;
+    }
+    const newVal = button.getAttribute('aria-pressed') == 'true';
+    const img = newVal ? 'chat-open' : 'chat';
+    this.#drawButton(img);
+  }
 
-    const chatIcon = selectedId == '2' ? 'chat-open' : 'chat';
-    this.#drawButton(chatIcon);
+  /**
+   * Update the StreamDeck activities button to indicate current state.
+   */
+  #updateActivitiesButton() {
+    const button = this.#getActivitiesButton();
+    if (!button) {
+      return;
+    }
+    const newVal = button.getAttribute('aria-pressed') == 'true';
+    const img = newVal ? 'activities-open' : 'activities';
+    this.#drawButton(img);
+  }
+
+  /**
+   * Update the StreamDeck stop presenting button to indicate current state.
+   */
+  #updatePresentingButton() {
+    const presentationBar = this.#getPresentationBar();
+    if (!presentationBar) {
+      return;
+    }
+    const img = presentationBar.hasChildNodes() ? 'present-stop' : 'blank';
+    this.#drawButton(img);
+  }
+
+  /**
+   * Update the StreamDeck mic button (green room) to indicate current state.
+   */
+  #updateGreenRoomMicButton() {
+    const button = this.#getGreenRoomMicButton();
+    if (!button) {
+      return;
+    }
+    const newVal = button.dataset?.isMuted == 'true';
+    const img = newVal ? 'mic-disabled' : 'mic';
+    this.#drawButton(img);
+  }
+
+  /**
+   * Update the StreamDeck camera button (green room) to indicate current state.
+   */
+  #updateGreenRoomCamButton() {
+    const button = this.#getGreenRoomCamButton();
+    if (!button) {
+      return;
+    }
+    const newVal = button.dataset?.isMuted == 'true';
+    const img = newVal ? 'cam-disabled' : 'cam';
+    this.#drawButton(img);
   }
 
 
-  /**
+  /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
    *
-   * Helper methods to get Meet UI elements.
+   * Helpers to get Meet UI elements.
    *
    */
 
   /**
-   * Gets the bottom bar in a meeting
+   * Get the Start Instant Meeting button (lobby).
    *
    * @return {?Element}
    */
-  #getStatusBar() {
-    return document.querySelector('[jsname=EaZ7Cc]');
+  #getStartInstantMeetingButton() {
+    return document.querySelector('[jsname=CuSyi]');
   }
 
   /**
-   * Gets the Mic button.
+   * Get the Start Next Meeting button (lobby).
+   *
+   * @return {?Element}
+   */
+  #getStartNextMeetingButton() {
+    return document.querySelector('[data-default-focus=true]');
+  }
+
+  /**
+   * Get the Join Meeting button (green room).
+   *
+   * @return {?Element}
+   */
+  #getEnterMeetingButton() {
+    return document.querySelector('[jsname=Qx7uuf]');
+  }
+
+  /**
+   * Get the Meeting Info dialog shown for instant meetings (meeting).
+   *
+   * @return {?Element}
+   */
+  #getMeetingInfoDialog() {
+    return document.querySelector('[jscontroller=Cmkwqf]');
+  }
+
+  /**
+   * Get the close button for the Meeting Info dialog (meeting).
+   *
+   * @return {?Element}
+   */
+    #getMeetingInfoDialogCloseButton() {
+      const dialog = document.querySelector('[jscontroller=Cmkwqf]');
+      if (dialog) {
+        return dialog.querySelector('[aria-label=Close]');
+      }
+    }
+
+  /**
+   * Get the presentation bar container (meeting).
+   *
+   * @return {?Element}
+   */
+  #getPresentationBar() {
+    return document.querySelector('[jscontroller=A5S1ke]');
+  }
+
+  /**
+   * Get the Mic button in the meeting room.
    *
    * @return {?Element}
    */
   #getMicButton() {
-    return document.querySelector('[jsname=Dg9Wp]')?.firstChild;
+    const sel = '[jscontroller=t8kvj]';
+    return document.querySelector(sel)?.querySelector('button');
   }
 
   /**
- * Gets the Cam button.
- *
- * @return {?Element}
- */
-  #getCamButton() {
-    return document.querySelector('[jsname=R3GXJb]')?.firstChild;
-  }
-
-  /**
-   * Gets the Hand button container.
+   * Get the Camera button in the meeting room.
    *
    * @return {?Element}
    */
-  #getHandButton() {
-    return document.querySelector('.p2SYhf');
+  #getCamButton() {
+    const sel = '[jscontroller=DXtw0b]';
+    return document.querySelector(sel)?.querySelector('button');
   }
 
   /**
-   * Gets the Hand button container.
+   * Get the CC button in the meeting room.
    *
    * @return {?Element}
    */
   #getCCButton() {
-    return document.querySelector('.Q8K3Le');
+    const sel = '[jscontroller=U1Cub]';
+    return document.querySelector(sel)?.querySelector('button');
   }
 
   /**
-   * Gets the Stop Presenting button.
+   * Get the Raise Hand button in the meeting room.
+   *
+   * @return {?Element}
+   */
+  #getHandButton() {
+    const sel = '[jscontroller=HRWIlc]';
+    return document.querySelector(sel)?.querySelector('button');
+  }
+
+  /**
+   * Get the Stop Presenting button in the meeting room.
    *
    * @return {?Element}
    */
   #getStopPresentingButton() {
-    return document.querySelector('[jsname=PTpBtc]');
+    const sel = '[jsname=aK5XXd]';
+    return document.querySelector(sel);
   }
 
+  /**
+   * Get the Info button in the meeting room.
+   *
+   * @return {?Element}
+   */
+  #getInfoButton() {
+    const sel = '[data-panel-id="5"]';
+    return document.querySelector(sel);
+  }
 
   /**
+   * Get the People button in the meeting room.
    *
-   * Helper methods interact with Meet UI elements.
+   * @return {?Element}
+   */
+  #getPeopleButton() {
+    const sel = '[data-panel-id="1"]';
+    return document.querySelector(sel);
+  }
+
+  /**
+   * Get the Chat button in the meeting room.
+   *
+   * @return {?Element}
+   */
+  #getChatButton() {
+    const sel = '[data-panel-id="2"]';
+    return document.querySelector(sel);
+  }
+
+  /**
+   * Get the Activities button in the meeting room.
+   *
+   * @return {?Element}
+   */
+  #getActivitiesButton() {
+    const sel = '[data-panel-id="10"]';
+    return document.querySelector(sel);
+  }
+
+  /**
+   * Get the Hang Up button in the meeting room.
+   *
+   * @return {?Element}
+   */
+  #getHangupButton() {
+    const sel = '[jscontroller=NBSUBc]';
+    return document.querySelector(sel)?.querySelector('button');
+  }
+
+  /**
+   * Get the Mic button in the green room.
+   *
+   * @return {?Element}
+   */
+  #getGreenRoomMicButton() {
+    const sel = '[jscontroller=t8kvj]';
+    return document.querySelector(sel)?.querySelector('[role=button]');
+  }
+
+  /**
+   * Get the Camera button in the green room.
+   *
+   * @return {?Element}
+   */
+  #getGreenRoomCamButton() {
+    const sel = '[jscontroller=DXtw0b]';
+    return document.querySelector(sel)?.querySelector('[role=button]');
+  }
+
+  /**
+   * Get the Rejoin Meeting button in the exit hall.
+   *
+   * @return {?Element}
+   */
+  #getRejoinButton() {
+    const sel = '[jsname=oI7Fj] [role=button]';
+    return document.querySelector(sel);
+  }
+
+  /**
+   * Get the Return to Home button in the exit hall.
+   *
+   * @return {?Element}
+   */
+  #getReturnToHomeButton() {
+    const sel = '[jsname=WIVZEd] [role=button]';
+    return document.querySelector(sel);
+  }
+
+  /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+   *
+   * Helpers to interact with Meet UI elements.
    *
    */
 
   /**
-   * Clicks an element.
-   *
-   * @param {string} querySelector Query selector of the element to click.
+   * Starts an instant meeting (lobby).
    */
-  #tapElement(querySelector) {
-    const elem = document.querySelector(querySelector);
-    if (elem) {
-      elem.click();
+  #tapStartInstantMeeting() {
+    const button = this.#getStartInstantMeetingButton();
+    if (button) {
+      button.click();
     }
   }
 
   /**
-   * Starts an instant meeting (from the landing page).
-   */
-  #tapStartInstantMeeting() {
-    this.#tapElement('[jsname=CuSyi]');
-  }
-
-  /**
-   * Joins the next scheduled meeting (from the landing page)).
+   * Starts the next meeting (lobby).
    */
   #tapStartNextMeeting() {
-    this.#tapElement('[data-default-focus=true]');
+    const button = this.#getStartNextMeetingButton();
+    if (button) {
+      button.click();
+    }
   }
 
   /**
-   * Enters meeting from green room.
+   * Taps the mic button, to mute/unmute the mic (green room).
+   */
+  #tapGreenRoomMic() {
+    const button = this.#getGreenRoomMicButton();
+    if (button) {
+      button.click();
+    }
+  }
+
+  /**
+   * Taps the camera button, to mute/unmute the camera (green room).
+   */
+  #tapGreenRoomCam() {
+    const button = this.#getGreenRoomCamButton();
+    if (button) {
+      button.click();
+    }
+  }
+
+  /**
+   * Enter/join meeting (green room).
    */
   #tapEnterMeeting() {
-    this.#tapElement('[jsname=Qx7uuf]');
+    const button = this.#getEnterMeetingButton();
+    if (button) {
+      button.click();
+    }
   }
 
   /**
-   * Taps the mic button to mute/unmute.
+   * Taps the mic button to mute/unmute (meeting room).
    */
   #tapMic() {
     const button = this.#getMicButton();
@@ -564,7 +900,7 @@ class MeetWrapper { // eslint-disable-line
   }
 
   /**
-   * Taps the camera button, to mute/unmute.
+   * Taps the camera button, to mute/unmute (meeting room).
    */
   #tapCam() {
     const button = this.#getCamButton();
@@ -574,62 +910,67 @@ class MeetWrapper { // eslint-disable-line
   }
 
   /**
-   * Taps the handup button, to toggle the hand state.
+   * Taps the handup button, to toggle the hand state (meeting room).
    */
   #tapHand() {
-    const button = this.#getHandButton()?.firstChild;
+    const button = this.#getHandButton();
     if (button) {
       button.click();
     }
   }
 
   /**
-   * Taps the CC button, to toggle the captions.
+   * Taps the CC button, to toggle the captions (meeting room).
    */
   #tapCC() {
-    const button = this.#getCCButton()?.firstChild;
+    const button = this.#getCCButton();
     if (button) {
       button.click();
     }
   }
 
   /**
-   * Taps the close button on the side panel.
+   * Taps the Info button, to toggle info panel (meeting room).
    */
-  #tapClosePanel() {
-    this.#tapElement('[jscontroller=soHxf]');
+  #tapInfo() {
+    const button = this.#getInfoButton();
+    if (button) {
+      button.click();
+    }
   }
 
   /**
-   * Taps the Users button, to toggle the list of users.
+   * Taps the Users button, to toggle the list of users (meeting room).
    */
   #tapUsers() {
-    const panelElem = document.querySelector('[jsname=Yz8Ubc]');
-    const userButton = document.querySelector('[data-tab-id="1"]');
-
-    if (panelElem && userButton.getAttribute('aria-expanded') == 'true') {
-      this.#tapClosePanel();
-    } else {
-      userButton.click();
+    const button = this.#getPeopleButton();
+    if (button) {
+      button.click();
     }
   }
 
   /**
-   * Taps the Chat button, to toggle the chat panel.
+   * Taps the Chat button, to toggle the chat panel (meeting room).
    */
   #tapChat() {
-    const panelElem = document.querySelector('[jsname=Yz8Ubc]');
-    const chatButton = document.querySelector('[data-tab-id="2"]');
-
-    if (panelElem && chatButton.getAttribute('aria-expanded') == 'true') {
-      this.#tapClosePanel();
-    } else {
-      chatButton.click();
+    const button = this.#getChatButton();
+    if (button) {
+      button.click();
     }
   }
 
   /**
-   * Taps the stop presenting button.
+   * Taps the Activities button, to toggle activities panel (meeting room).
+   */
+  #tapActivities() {
+    const button = this.#getActivitiesButton();
+    if (button) {
+      button.click();
+    }
+  }
+
+  /**
+   * Taps the stop presenting button (meeting room).
    */
   #tapStopPresenting() {
     const button = this.#getStopPresentingButton();
@@ -639,23 +980,42 @@ class MeetWrapper { // eslint-disable-line
   }
 
   /**
-   * Taps the Hang Up button, to end the call.
+   * Taps close button on the meeting info dialog (meeting room).
+   */
+  #tapCloseInfoDialog() {
+    const button = this.#getMeetingInfoDialogCloseButton();
+    if (button) {
+      button.click();
+    }
+  }
+
+  /**
+   * Taps the Hang Up button, to end the call (meeting room).
    */
   #tapHangUp() {
-    this.#tapElement('[jsname=CQylAd]');
+    const button = this.#getHangupButton();
+    if (button) {
+      button.click();
+    }
   }
 
   /**
-   * Taps the Rejoin button on the exit page.
+   * Taps the Rejoin button (exit hall).
    */
   #tapRejoin() {
-    this.#tapElement('[jsname=oI7Fj] [role=button]');
+    const button = this.#getRejoinButton();
+    if (button) {
+      button.click();
+    }
   }
 
   /**
-   * Taps the Return to Home Screen button on the exit page.
+   * Taps the Return to Home Screen button (exit hall).
    */
   #tapHome() {
-    this.#tapElement('[jsname=WIVZEd] [role=button]');
+    const button = this.#getReturnToHomeButton();
+    if (button) {
+      button.click();
+    }
   }
 }
