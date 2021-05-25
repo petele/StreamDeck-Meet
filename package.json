@@ -4,6 +4,9 @@
   "description": "Adds StreamDeck support to Google Meet",
   "author": "",
   "license": "Apache-2.0",
+  "scripts": {
+    "lint": "eslint src"
+  },
   "devDependencies": {
     "@babel/core": "^7.12.10",
     "@babel/eslint-parser": "^7.12.1",

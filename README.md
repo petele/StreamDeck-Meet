@@ -1,6 +1,9 @@
 # Meet + StreamDeck Helper
 
-Last Updated: 2021-01-05
+Last Updated: 2021-05-25
+
+**NOTE:** The Extension hasn't been updated to use the new Meet UI yet, so
+if you're using the new UI, you're temporarily out of luck. Sorry.
 
 ## The problem
 
@@ -18,13 +21,12 @@ programmable 15 key keyboard. Each key is backed with an LCD panel, making it
 easy to customize the buttons for any use. It connects to the computer via
 USB and HID.
 
+Thanks to @jimmc, support for the StreamDeck Mini was added on 2021-05-25.
+
 ### WebHID
 
 The Chrome team is currently implementing [WebHID](https://web.dev/hid/), which
-will allow pages to interact with HID devices like the StreamDeck. The WebHID
-API is currently available as an origin trial, or if you enable the
-`#experimental-web-platform-features` flag in `chrome://flags`, and it should
-be available in Stable (to all users) in late Q1 or early Q2.
+will allow pages to interact with HID devices like the StreamDeck.
 
 Because this uses Chrome's WebHID implementation, no device drivers are needed,
 and it works beautifully on ChromeOS, Mac, Windows, and Linux (though I haven't
