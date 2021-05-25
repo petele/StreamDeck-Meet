@@ -198,7 +198,7 @@ class MeetWrapper { // eslint-disable-line
         return;
       }
       if (buttonId === this.#streamDeck.buttonNameToId('light-off')) {
-        this.#hueLights.on(true);
+        this.#hueLights.on(false);
         return;
       }
     }
