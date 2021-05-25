@@ -1,3 +1,6 @@
+/* eslint-disable */
+/* TODO: Fix linting issues */
+
 /*! canvas-to-bmp version 1.0 ALPHA
     (c) 2015 Ken "Epistemex" Fyrstenberg
     MIT License (this header required)
@@ -118,3 +121,5 @@ var CanvasToBMP = {
     return "data:image/bmp;base64," + btoa(bs);
   }
 };
+
+/* eslint-enable */
