@@ -60,7 +60,7 @@ class StreamDeckMini { // eslint-disable-line
 
     // Exit Hall
     'home': 1,
-    'rejoin': 6
+    'rejoin': 6,
   };
 
   OFFSET = 1;
@@ -84,6 +84,7 @@ class StreamDeckMini { // eslint-disable-line
   /**
    * Set the brightness of the StreamDeck panel.
    *
+   * @param {object} device StreamDeck device object
    * @param {number} percentage 1-100
    * @return {?Promise<ArrayBuffer>}
    */
@@ -95,10 +96,12 @@ class StreamDeckMini { // eslint-disable-line
   /**
    * Reset the StreamDeck device.
    *
+   * @param {object} device StreamDeck device object
    * @return {?Promise<ArrayBuffer>}
    */
   async reset(device) {
-    const data = new Uint8Array([0x63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+    const arr = [0x63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    const data = new Uint8Array(arr);
     return device.sendFeatureReport(0x0b, data);
   }
 
@@ -116,9 +119,10 @@ class StreamDeckMini { // eslint-disable-line
     /*
     // For debugging, write out a file
     const directoryHandle = await window.showDirectoryPicker();
-    const fileHandle = await directoryHandle.getFileHandle("temp.bmp", {create: true});
+    const opts = {create: true};
+    const fileHandle = await directoryHandle.getFileHandle('temp.bmp', opts);
     const writable = await fileHandle.createWritable();
-    await writable.write({type:'write', data:buff});
+    await writable.write({type: 'write', data: buff});
     await writable.close();
     */
 
@@ -154,7 +158,9 @@ class StreamDeckMini { // eslint-disable-line
       const end = start + byteCount;
       const packet = new Uint8Array(this.#PACKET_SIZE);
       packet.set(new Uint8Array(header));
-      packet.set(new Uint8Array(buffer.slice(start, end)),this.#PACKET_HEADER_LENGTH);
+      packet.set(
+          new Uint8Array(buffer.slice(start, end)),
+          this.#PACKET_HEADER_LENGTH);
 
       start = end;
       bytesRemaining = bytesRemaining - byteCount;

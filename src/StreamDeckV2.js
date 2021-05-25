@@ -58,7 +58,7 @@ class StreamDeckV2 { // eslint-disable-line
 
     // Exit Hall
     'home': 14,
-    'rejoin': 10
+    'rejoin': 10,
   };
 
   OFFSET = 4;
@@ -81,6 +81,7 @@ class StreamDeckV2 { // eslint-disable-line
   /**
    * Set the brightness of the StreamDeck panel.
    *
+   * @param {object} device StreamDeck device object
    * @param {number} percentage 1-100
    * @return {?Promise<ArrayBuffer>}
    */
@@ -92,6 +93,7 @@ class StreamDeckV2 { // eslint-disable-line
   /**
    * Reset the StreamDeck device.
    *
+   * @param {object} device StreamDeck device object
    * @return {?Promise<ArrayBuffer>}
    */
   async reset(device) {
@@ -140,7 +142,10 @@ class StreamDeckV2 { // eslint-disable-line
       const end = start + byteCount;
       const packet = new Uint8Array(this.#PACKET_SIZE);
       packet.set(new Uint8Array(header));
-      packet.set(new Uint8Array(buffer.slice(start, end)),this.#PACKET_HEADER_LENGTH);
+      packet.set(
+          new Uint8Array(buffer.slice(start, end)),
+          this.#PACKET_HEADER_LENGTH,
+      );
 
       start = end;
       bytesRemaining = bytesRemaining - byteCount;

@@ -241,7 +241,7 @@ class MeetWrapper { // eslint-disable-line
     if (this.#currentRoom === this.#ROOM_NAMES.lobby) {
       if (buttonId === this.#streamDeck.buttonNameToId('start-next')) {
         this.#tapStartNextMeeting();
-      } else if (buttonId === this.#streamDeck.buttonNameToId('start-instant')) {
+      } else if (buttonId === this.#streamDeck.buttonNameToId('start-instant')) { // eslint-disable-line
         this.#tapStartInstantMeeting();
       }
       return;
@@ -308,7 +308,7 @@ class MeetWrapper { // eslint-disable-line
     }
     const buttonId = this.#streamDeck.buttonNameToId(iconName);
     if (buttonId < 0) {
-      return;  // Not defined in the current configuration.
+      return; // Not defined in the current configuration.
     }
     const iconURL = chrome.runtime.getURL(`ico-svg/${iconName}.svg`);
     this.#streamDeck.fillURL(buttonId, iconURL, true);

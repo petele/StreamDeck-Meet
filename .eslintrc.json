@@ -17,6 +17,9 @@
     "max-len": ["error", {"ignoreTemplateLiterals": true}]
   },
   "globals": {
-    "chrome": true
+    "CanvasToBMP": false,
+    "chrome": true,
+    "StreamDeckMini": false,
+    "StreamDeckV2": false
   }
 }

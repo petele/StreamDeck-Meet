@@ -107,7 +107,7 @@ class StreamDeck { // eslint-disable-line
         this.#deviceType = new StreamDeckV2();
         break;
       default:
-        console.warn("StreamDeck product ID", this.#device.productId, "is not tested");
+        console.warn('StreamDeck product ID', this.#device.productId, 'is not tested'); // eslint-disable-line
         this.#deviceType = new StreamDeckV2();
         break;
     }
@@ -165,10 +165,10 @@ class StreamDeck { // eslint-disable-line
     }
     if (showPicker) {
       const opts = {filters: [
-        {vendorId: 0x0fd9, productId: 0x0060},  // Original
-        {vendorId: 0x0fd9, productId: StreamDeckMini.PRODUCT_ID},  // Mini
-        {vendorId: 0x0fd9, productId: 0x006c},  // XL
-        {vendorId: 0x0fd9, productId: StreamDeckV2.PRODUCT_ID}  // V2
+        {vendorId: 0x0fd9, productId: 0x0060}, // Original
+        {vendorId: 0x0fd9, productId: StreamDeckMini.PRODUCT_ID}, // Mini
+        {vendorId: 0x0fd9, productId: 0x006c}, // XL
+        {vendorId: 0x0fd9, productId: StreamDeckV2.PRODUCT_ID}, // V2
       ]};
       const devices = await navigator.hid.requestDevice(opts);
       return devices[0];
@@ -342,7 +342,8 @@ class StreamDeck { // eslint-disable-line
     if (cache && this.#imageCache[color]) {
       return this.#sendBuffer(buttonId, this.#imageCache[color]);
     }
-    const canvas = new OffscreenCanvas(this.#deviceType.ICON_SIZE, this.#deviceType.ICON_SIZE);
+    const canvas = new OffscreenCanvas(
+        this.#deviceType.ICON_SIZE, this.#deviceType.ICON_SIZE);
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = color;
     ctx.fillRect(0, 0, this.#deviceType.ICON_SIZE, this.#deviceType.ICON_SIZE);
@@ -397,11 +398,15 @@ class StreamDeck { // eslint-disable-line
     const img = await this.#loadImageFromURL(url);
     const imgWidth = img.width;
     const imgHeight = img.height;
-    const canvas = new OffscreenCanvas(this.#deviceType.ICON_SIZE, this.#deviceType.ICON_SIZE);
+    const canvas = new OffscreenCanvas(
+        this.#deviceType.ICON_SIZE, this.#deviceType.ICON_SIZE);
     const ctx = canvas.getContext('2d');
-    ctx.translate(this.#deviceType.ICON_SIZE_HALF, this.#deviceType.ICON_SIZE_HALF);
+    ctx.translate(
+        this.#deviceType.ICON_SIZE_HALF, this.#deviceType.ICON_SIZE_HALF);
     ctx.rotate(this.#deviceType.IMAGE_ROTATION * Math.PI / 180);
-    ctx.translate(this.#deviceType.ICON_SIZE_HALF * -1, this.#deviceType.ICON_SIZE_HALF * -1);
+    ctx.translate(
+        this.#deviceType.ICON_SIZE_HALF * -1,
+        this.#deviceType.ICON_SIZE_HALF * -1);
     ctx.drawImage(img,
         0, 0, imgWidth, imgHeight,
         0, 0, this.#deviceType.ICON_SIZE, this.#deviceType.ICON_SIZE);
