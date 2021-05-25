@@ -2,9 +2,6 @@
 
 Last Updated: 2021-05-25
 
-**NOTE:** The Extension hasn't been updated to use the new Meet UI yet, so
-if you're using the new UI, you're temporarily out of luck. Sorry.
-
 ## The problem
 
 The keyboard shortcuts in Meet are great, but I want dedicated hardware buttons
@@ -58,17 +55,21 @@ In the green room, there are three buttons enabled:
 * Enter meeting (Join now).
 * Mute/unmute mic.
 * Enable/disable cam.
+* Return to home screen.
 
 ### In the meeting
 
 While in the meeting, there are sevent buttons enabled:
 
-* Show/hide people in meeting.
-* Show/hide chat.
 * Mute/unmute mic.
 * Enable/disable cam.
-* Raise/lower hand (when available).
 * Enable/disable captions (when available).
+* Raise/lower hand (when available).
+* Stop presenting (when applicable).
+* Show/hide meeting info.
+* Show/hide people in meeting.
+* Show/hide chat.
+* Show/hide activities panel (when available).
 * Leave meeting.
 
 ### After meeting
