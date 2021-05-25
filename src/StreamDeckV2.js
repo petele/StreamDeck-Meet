@@ -27,34 +27,37 @@ class StreamDeckV2 { // eslint-disable-line
 
   buttonNameToIdMap = {
     // All rooms
-    'light-off': 4,
     'light-on': 3,
+    'light-off': 4,
 
     // Lobby
-    'start-instant': 6,
     'start-next': 5,
+    'start-instant': 6,
 
     // Green Room
-    'cam': 11,
-    'cam-disabled': 11,
     'enter-meeting': 5,
     'mic': 10,
     'mic-disabled': 10,
+    'cam': 11,
+    'cam-disabled': 11,
 
     // Meeting
     // cam, cam-disabled
-    'cc': 13,
-    'cc-on': 13,
-    'chat': 6,
-    'chat-open': 6,
+    'info': 5,
+    'info-open': 5,
+    'users': 6,
+    'users-open': 6,
+    'chat': 7,
+    'chat-open': 7,
+    'activities': 8,
+    'activities-open': 8,
+    'present-stop': 9,
+    'blank': 9,
+    'cc': 12,
+    'cc-on': 12,
+    'hand': 13,
+    'hand-raised': 13,
     'end-call': 14,
-    'hand': 12,
-    'hand-raised': 12,
-    // mic, mic-disabled
-    'present-stop': 7,
-    'blank': 7,
-    'users': 5,
-    'users-open': 5,
 
     // Exit Hall
     'home': 14,
