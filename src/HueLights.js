@@ -49,7 +49,17 @@ class HueLights { // eslint-disable-line
   }
 
   /**
-   * Reports whether WebHID is supported.
+   * Reports whether the Hue Lights API is available.
+   *
+   * @return {boolean}
+   */
+  get isAvailable() {
+    return this.#ready;
+  }
+
+
+  /**
+   * The lights should be turned on/off automatically.
    *
    * @return {boolean}
    */

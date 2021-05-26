@@ -43,7 +43,9 @@ class MeetWrapper { // eslint-disable-line
       this.#handleStreamDeckPress(evt.detail.buttonId);
     });
 
-    this.#hueLights = hueLights;
+    if (hueLights?.isAvailable) {
+      this.#hueLights = hueLights;
+    }
 
     // Watch for room changes
     if (window.location.pathname === '/') {
