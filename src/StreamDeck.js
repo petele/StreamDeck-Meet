@@ -40,6 +40,11 @@ class StreamDeck { // eslint-disable-line
   constructor() {
     this.#isSupported = 'hid' in navigator;
 
+    // If HID is not supported, bail.
+    if (!this.#isSupported) {
+      return;
+    }
+
     // Handle behaviour when the device is connected, or re-connected.
     navigator.hid.addEventListener('connect', async (event) => {
       const connected = await this.connect();
