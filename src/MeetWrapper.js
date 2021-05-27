@@ -20,6 +20,7 @@
 
 class MeetWrapper { // eslint-disable-line
   #currentRoom;
+  #hasBeenActivated = false;
 
   #ROOM_NAMES = {
     lobby: 'lobby',
@@ -46,6 +47,18 @@ class MeetWrapper { // eslint-disable-line
     if (hueLights?.isAvailable) {
       this.#hueLights = hueLights;
     }
+
+    window.addEventListener('fullscreenchange', () => {
+      this.#drawFullScreenButton();
+    });
+
+    window.addEventListener('click', () => {
+      if (this.#hasBeenActivated || !navigator.userActivation.isActive) {
+        return;
+      }
+      this.#hasBeenActivated = true;
+      this.#drawFullScreenButton();
+    });
 
     // Watch for room changes
     if (window.location.pathname === '/') {
@@ -84,6 +97,7 @@ class MeetWrapper { // eslint-disable-line
 
     this.#resetButtons();
     this.#drawHueButtons();
+    this.#drawFullScreenButton();
     this.#drawButton(`start-next`);
     this.#drawButton(`start-instant`);
 
@@ -104,6 +118,7 @@ class MeetWrapper { // eslint-disable-line
 
     this.#resetButtons();
     this.#drawHueButtons();
+    this.#drawFullScreenButton();
     this.#drawButton(`enter-meeting`);
     this.#drawButton(`home`);
 
@@ -132,6 +147,7 @@ class MeetWrapper { // eslint-disable-line
 
     this.#resetButtons();
     this.#drawHueButtons();
+    this.#drawFullScreenButton();
     this.#drawButton(`end-call`);
 
     // The timeout is there to make sure the elements have drawn on
@@ -172,6 +188,7 @@ class MeetWrapper { // eslint-disable-line
 
     this.#resetButtons();
     this.#drawHueButtons();
+    this.#drawFullScreenButton();
     this.#drawButton(`rejoin`);
     this.#drawButton(`home`);
 
@@ -203,6 +220,12 @@ class MeetWrapper { // eslint-disable-line
         this.#hueLights.on(false);
         return;
       }
+    }
+
+    // Toggle full screen, used in all rooms.
+    if (buttonId === this.#streamDeck.buttonNameToId('fullscreen-on')) {
+      this.#toggleFullScreen();
+      return;
     }
 
     // Available while in the lobby.
@@ -251,7 +274,6 @@ class MeetWrapper { // eslint-disable-line
       } else if (buttonId === this.#streamDeck.buttonNameToId('cc')) {
         this.#tapCC();
       } else if (buttonId === this.#streamDeck.buttonNameToId('end-call')) {
-        this.#resetButtons();
         this.#tapHangUp();
       }
       return;
@@ -262,7 +284,6 @@ class MeetWrapper { // eslint-disable-line
       if (buttonId === this.#streamDeck.buttonNameToId('rejoin')) {
         this.#tapRejoin();
       } else if (buttonId === this.#streamDeck.buttonNameToId('home')) {
-        this.#resetButtons();
         this.#tapHome();
       }
       return;
@@ -307,6 +328,21 @@ class MeetWrapper { // eslint-disable-line
     }
     this.#drawButton(`light-on`);
     this.#drawButton(`light-off`);
+  }
+
+  /**
+   * Draw buttons for full screen toggle.
+   */
+  #drawFullScreenButton() {
+    if (document.fullscreenElement) {
+      this.#drawButton(`fullscreen-on`);
+      return;
+    }
+    if (!navigator.userActivation.isActive) {
+      this.#drawButton(`fullscreen-disabled`);
+      return;
+    }
+    this.#drawButton(`fullscreen-off`);
   }
 
 
@@ -597,11 +633,8 @@ class MeetWrapper { // eslint-disable-line
    * Update the StreamDeck stop presenting button to indicate current state.
    */
   #updatePresentingButton() {
-    const presentationBar = this.#getPresentationBar();
-    if (!presentationBar) {
-      return;
-    }
-    const img = presentationBar.hasChildNodes() ? 'present-stop' : 'blank';
+    const button = this.#getStopPresentingButton();
+    const img = button ? 'present-stop' : 'blank';
     this.#drawButton(img);
   }
 
@@ -791,8 +824,8 @@ class MeetWrapper { // eslint-disable-line
    * @return {?Element}
    */
   #getHangupButton() {
-    const sel = '[jscontroller=NBSUBc]';
-    return document.querySelector(sel)?.querySelector('button');
+    const sel = '[jsname=CQylAd]';
+    return document.querySelector(sel);
   }
 
   /**
@@ -840,6 +873,22 @@ class MeetWrapper { // eslint-disable-line
    * Helpers to interact with Meet UI elements.
    *
    */
+
+  /**
+   * Toggles the tab between full screen and regular.
+   */
+  async #toggleFullScreen() {
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else {
+        await document.body.requestFullscreen();
+      }
+    } catch (ex) {
+      // Cannot do fullscreen, disable the button.
+      this.#drawButton(`fullscreen-disabled`);
+    }
+  }
 
   /**
    * Starts an instant meeting (lobby).

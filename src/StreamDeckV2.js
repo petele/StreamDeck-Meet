@@ -29,6 +29,9 @@ class StreamDeckV2 { // eslint-disable-line
     // All rooms
     'light-on': 3,
     'light-off': 4,
+    'fullscreen-on': 2,
+    'fullscreen-off': 2,
+    'fullscreen-disabled': 2,
 
     // Lobby
     'start-next': 5,
