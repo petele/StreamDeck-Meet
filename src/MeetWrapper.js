@@ -854,7 +854,7 @@ class MeetWrapper { // eslint-disable-line
    * @return {?Element}
    */
   #getRejoinButton() {
-    const sel = '[jsname=oI7Fj] [role=button]';
+    const sel = '[jsname=oI7Fj] button';
     return document.querySelector(sel);
   }
 
@@ -864,7 +864,7 @@ class MeetWrapper { // eslint-disable-line
    * @return {?Element}
    */
   #getReturnToHomeButton() {
-    const sel = '[jsname=WIVZEd] [role=button]';
+    const sel = '[jsname=WIVZEd] button';
     return document.querySelector(sel);
   }
 
