@@ -12,6 +12,7 @@
         "StreamDeck.js",
         "StreamDeckMini.js",
         "StreamDeckV2.js",
+        "StreamDeckMK2.js",
         "MeetWrapper.js",
         "main.js"
       ]
