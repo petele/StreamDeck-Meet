@@ -61,7 +61,9 @@ class MeetWrapper { // eslint-disable-line
     });
 
     // Watch for room changes
-    if (window.location.pathname === '/') {
+    if (window.location.pathname === "/" ||
+      // The installed PWA version may have this path.
+      window.location.pathname.indexOf("/landing") !== -1) {
       this.#enterLobby();
       return;
     }
