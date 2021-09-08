@@ -61,7 +61,8 @@ class MeetWrapper { // eslint-disable-line
     });
 
     // Watch for room changes
-    if (window.location.pathname === '/') {
+    const pathname = window.location.pathname;
+    if (pathname === '/' || pathname === '/landing') {
       this.#enterLobby();
       return;
     }
