@@ -50,6 +50,8 @@ class StreamDeckMini { // eslint-disable-line
     'chat': 3,
     'chat-open': 3,
     'end-call': -1,
+    'fellow': -1,
+    'fellow-open': -1,
     'hand': 5,
     'hand-raised': 5,
     // mic, mic-disabled

@@ -157,6 +157,7 @@ class MeetWrapper { // eslint-disable-line
       this.#setupMicButton();
       this.#setupCamButton();
       this.#setupCCButton();
+      this.#setupFellowButton();
       this.#setupHandButton();
       this.#setupInfoButton();
       this.#setupPeopleButton();
@@ -273,6 +274,8 @@ class MeetWrapper { // eslint-disable-line
         this.#tapHand();
       } else if (buttonId === this.#streamDeck.buttonNameToId('cc')) {
         this.#tapCC();
+      } else if (buttonId === this.#streamDeck.buttonNameToId('fellow')) {
+        this.#tapFellow();
       } else if (buttonId === this.#streamDeck.buttonNameToId('end-call')) {
         this.#tapHangUp();
       }
@@ -395,6 +398,21 @@ class MeetWrapper { // eslint-disable-line
     });
     ccObserver.observe(ccButton, {attributeFilter: ['aria-pressed']});
     this.#updateCCButton();
+  }
+
+  /**
+   * Setup the meeting room Fellow notes button.
+   */
+  #setupFellowButton() {
+    const fellowButton = this.#getFellowButton();
+    if (!fellowButton) {
+      return;
+    }
+    const fellowObserver = new MutationObserver(() => {
+      this.#updateFellowButton();
+    });
+    fellowObserver.observe(fellowButton, {attributeFilter: ['aria-pressed']});
+    this.#updateFellowButton();
   }
 
   /**
@@ -561,6 +579,19 @@ class MeetWrapper { // eslint-disable-line
     }
     const newVal = button.getAttribute('aria-pressed') == 'true';
     const img = newVal ? 'cc-on' : 'cc';
+    this.#drawButton(img);
+  }
+
+  /**
+   * Update the StreamDeck Fellow button to indicate current state.
+   */
+  #updateFellowButton() {
+    const button = this.#getFellowButton();
+    if (!button) {
+      return;
+    }
+    const newVal = button.getAttribute('aria-pressed') == 'true';
+    const img = newVal ? 'fellow-open' : 'fellow';
     this.#drawButton(img);
   }
 
@@ -756,6 +787,16 @@ class MeetWrapper { // eslint-disable-line
   #getCCButton() {
     const sel = '[jscontroller=U1Cub]';
     return document.querySelector(sel)?.querySelector('button');
+  }
+
+  /**
+   * Get the Fellow button in the meeting room.
+   *
+   * @return {?Element}
+   */
+  #getFellowButton() {
+    const sel = "[id=fellow-button]";
+    return document.querySelector(sel);
   }
 
   /**
@@ -975,6 +1016,16 @@ class MeetWrapper { // eslint-disable-line
    */
   #tapCC() {
     const button = this.#getCCButton();
+    if (button) {
+      button.click();
+    }
+  }
+
+  /**
+   * Taps the Fellow button, to toggle the fellow notes (meeting room).
+   */
+   #tapFellow() {
+    const button = this.#getFellowButton();
     if (button) {
       button.click();
     }
