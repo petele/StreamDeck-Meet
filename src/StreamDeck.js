@@ -174,6 +174,7 @@ class StreamDeck { // eslint-disable-line
         {vendorId: 0x0fd9, productId: StreamDeckMini.PRODUCT_ID}, // Mini
         {vendorId: 0x0fd9, productId: 0x006c}, // XL
         {vendorId: 0x0fd9, productId: StreamDeckV2.PRODUCT_ID}, // V2
+        {vendorId: 0x0fd9, productId: 0x0080}, // MK.2
       ]};
       const devices = await navigator.hid.requestDevice(opts);
       return devices[0];
@@ -193,7 +194,8 @@ class StreamDeck { // eslint-disable-line
         if (device.productId === 0x0060 ||
             device.productId === StreamDeckMini.PRODUCT_ID ||
             device.productId === 0x006c ||
-            device.productId === StreamDeckV2.PRODUCT_ID) {
+            device.productId === StreamDeckV2.PRODUCT_ID ||
+            device.productId === 0x0080) {
           return device;
         }
       }
