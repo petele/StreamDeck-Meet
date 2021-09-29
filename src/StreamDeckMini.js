@@ -69,6 +69,7 @@ class StreamDeckMini { // eslint-disable-line
   ICON_SIZE = 80;
   ICON_SIZE_HALF = this.ICON_SIZE / 2;
   IMAGE_ROTATION = -90;
+  HRZFLIP = 0;
 
   #PACKET_SIZE = 1024;
   #PACKET_HEADER_LENGTH = 16;
