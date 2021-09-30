@@ -14,64 +14,70 @@
  * limitations under the License.
  */
 
+/* Packets/Header logic for V1 Stream Deck from https://github.com/Julusian/node-elgato-stream-deck */
+
 /* eslint-disable no-invalid-this */
 
 'use strict';
 
 /**
  *
- * @module StreamDeckMini
+ * @module StreamDeckV1
  */
-class StreamDeckMini { // eslint-disable-line
-  static PRODUCT_ID = 0x0063;
+class StreamDeckV1 { // eslint-disable-line
+  static PRODUCT_ID = 0x0060;
 
-  // We only have 6 buttons in the Mini, so a lot of
-  // buttons don't get displayed (-1).
   buttonNameToIdMap = {
     // All rooms
-    'light-off': -1,
-    'light-on': -1,
+    'light-on': 3,
+    'light-off': 2,
+    'fullscreen-on': 5,
+    'fullscreen-off': 5,
+    'fullscreen-disabled': 5,
 
     // Lobby
-    'start-instant': 6,
-    'start-next': 5,
+    'start-next': 15,
+    'start-instant': 14,
 
     // Green Room
-    'cam': 1,
-    'cam-disabled': 1,
-    'enter-meeting': 6,
-    'mic': 4,
-    'mic-disabled': 4,
+    'enter-meeting': 1,
+    'mic': 15,
+    'mic-disabled': 15,
+    'cam': 14,
+    'cam-disabled': 14,
 
     // Meeting
     // cam, cam-disabled
-    'cc': 6,
-    'cc-on': 6,
-    'chat': 3,
-    'chat-open': 3,
-    'end-call': -1,
-    'hand': 5,
-    'hand-raised': 5,
-    // mic, mic-disabled
-    'present-stop': -1,
-    'blank': -1,
-    'users': 2,
-    'users-open': 2,
+    'info': 1, 
+    'info-open': 1, 
+    'users': 9,
+    'users-open': 9,
+    'chat': 8,
+    'chat-open': 8,
+    'activities': 7,
+    'activities-open': 7,
+    'present-stop': 6,
+    'blank': 6,
+    'cc': 13,
+    'cc-on': 13,
+    'hand': 12,
+    'hand-raised': 12,
+    'end-call': 11,
 
     // Exit Hall
-    'home': 1,
-    'rejoin': 6,
+    'home': 11,
+    'rejoin': 15,
   };
 
   OFFSET = 1;
   ID_OFFSET = 1;
-  NUM_KEYS = 6;
-  ICON_SIZE = 80;
+  NUM_KEYS = 15;
+  ICON_SIZE = 72;
   ICON_SIZE_HALF = this.ICON_SIZE / 2;
-  IMAGE_ROTATION = -90;
-  HRZFLIP = 0;
+  IMAGE_ROTATION = 0;
+  HRZFLIP = 1;
 
-  #PACKET_SIZE = 1024;
+  #PACKET_SIZE = 8191;
   #PACKET_HEADER_LENGTH = 16;
   #MAX_PAYLOAD_LENGTH = this.#PACKET_SIZE - this.#PACKET_HEADER_LENGTH;
 
@@ -113,21 +119,28 @@ class StreamDeckMini { // eslint-disable-line
    * @return {Promise<ArrayBuffer>}
    */
   async getImageBufferFromCanvas(canvas) {
+    //console.log('getImageBufferFromCanvas');
     const blob = CanvasToBMP.toBlob(canvas, false, false);
 
     const buff = await blob.arrayBuffer();
 
-    /*
-    // For debugging, write out a file
-    const directoryHandle = await window.showDirectoryPicker();
-    const opts = {create: true};
-    const fileHandle = await directoryHandle.getFileHandle('temp.bmp', opts);
-    const writable = await fileHandle.createWritable();
-    await writable.write({type: 'write', data: buff});
-    await writable.close();
-    */
-
     return buff;
+  }
+
+    /**
+   * Build packet header
+   *
+   * @param {ArrayBuffer} header Header buffer
+   * @param {number} partIndex (which part of the two packets for V1 Stream Deck)
+   * @param {number} isLast Is last packet (V1 Stream Deck uses two packets per buffer)
+   * @param {number} buttonId Button ID to draw the image on.
+   */
+  buildHeader(header, partIndex, isLast, buttonId) { 
+    new DataView(header).setUint8(0, 0x02); // report ID
+    new DataView(header).setUint8(1, 0x01); // always 1 - set the icon
+    new DataView(header).setUint16(2, partIndex, true);
+    new DataView(header).setUint8(4, isLast);
+    new DataView(header).setUint8(5, buttonId); // button
   }
 
   /**
@@ -138,36 +151,23 @@ class StreamDeckMini { // eslint-disable-line
    * @return {!array}
    */
   getPacketsFromBuffer(buttonId, buffer) {
-    const packets = [];
 
-    let page = 0;
-    let start = 0;
-    let bytesRemaining = buffer.byteLength;
+    const packetBytes = buffer.byteLength / 2;
 
-    while (bytesRemaining > 0) {
-      const byteCount = Math.min(bytesRemaining, this.#MAX_PAYLOAD_LENGTH);
-      const isLastPacket = bytesRemaining <= this.#MAX_PAYLOAD_LENGTH;
-      const header = new ArrayBuffer(this.#PACKET_HEADER_LENGTH);
+    const header1 = new ArrayBuffer(this.#PACKET_HEADER_LENGTH);
+    this.buildHeader(header1, 0x01, 0x0, buttonId);
 
-      new DataView(header).setUint8(0, 0x02); // report ID
-      new DataView(header).setUint8(1, 0x01); // always 1 - set the icon
-      new DataView(header).setUint16(2, page++, true);
-      new DataView(header).setUint8(4, isLastPacket ? 1 : 0); // is last packet
-      new DataView(header).setUint8(5, buttonId); // button
-      // leave the rest zero
+    const packet1 = new Uint8Array(this.#PACKET_SIZE);
+    packet1.set(new Uint8Array(header1));
+    packet1.set(new Uint8Array(buffer.slice(0,packetBytes)), this.#PACKET_HEADER_LENGTH);
 
-      const end = start + byteCount;
-      const packet = new Uint8Array(this.#PACKET_SIZE);
-      packet.set(new Uint8Array(header));
-      packet.set(
-          new Uint8Array(buffer.slice(start, end)),
-          this.#PACKET_HEADER_LENGTH);
+    const header2 = new ArrayBuffer(this.#PACKET_HEADER_LENGTH);
+    this.buildHeader(header2, 0x02, 0x1, buttonId);
 
-      start = end;
-      bytesRemaining = bytesRemaining - byteCount;
+    const packet2 = new Uint8Array(this.#PACKET_SIZE);
+    packet2.set(new Uint8Array(header2));
+    packet2.set(new Uint8Array(buffer.slice(packetBytes,buffer.byteLength)), this.#PACKET_HEADER_LENGTH);
 
-      packets.push(packet);
-    }
-    return packets;
+    return [packet1, packet2];
   }
 }

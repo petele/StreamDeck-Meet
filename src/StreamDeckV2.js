@@ -73,6 +73,7 @@ class StreamDeckV2 { // eslint-disable-line
   ICON_SIZE = 72;
   ICON_SIZE_HALF = this.ICON_SIZE / 2;
   IMAGE_ROTATION = 180;
+  HRZFLIP = 0;
 
   #PACKET_SIZE = 1024;
   #PACKET_HEADER_LENGTH = 8;

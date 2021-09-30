@@ -11,6 +11,7 @@
         "HueLights.js",
         "StreamDeck.js",
         "StreamDeckMini.js",
+        "StreamDeckV1.js",
         "StreamDeckV2.js",
         "MeetWrapper.js",
         "main.js"

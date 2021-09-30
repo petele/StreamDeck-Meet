@@ -108,6 +108,9 @@ class StreamDeck { // eslint-disable-line
       case StreamDeckMini.PRODUCT_ID:
         this.#deviceType = new StreamDeckMini();
         break;
+      case StreamDeckV1.PRODUCT_ID:
+        this.#deviceType = new StreamDeckV1();
+        break;
       case StreamDeckV2.PRODUCT_ID:
         this.#deviceType = new StreamDeckV2();
         break;
@@ -170,7 +173,7 @@ class StreamDeck { // eslint-disable-line
     }
     if (showPicker) {
       const opts = {filters: [
-        {vendorId: 0x0fd9, productId: 0x0060}, // Original
+        {vendorId: 0x0fd9, productId: StreamDeckV1.PRODUCT_ID}, // Original
         {vendorId: 0x0fd9, productId: StreamDeckMini.PRODUCT_ID}, // Mini
         {vendorId: 0x0fd9, productId: 0x006c}, // XL
         {vendorId: 0x0fd9, productId: StreamDeckV2.PRODUCT_ID}, // V2
@@ -191,7 +194,7 @@ class StreamDeck { // eslint-disable-line
     const devices = await navigator.hid.getDevices();
     for (const device of devices) {
       if (device.vendorId === 0x0fd9) {
-        if (device.productId === 0x0060 ||
+        if (device.productId === StreamDeckV1.PRODUCT_ID ||
             device.productId === StreamDeckMini.PRODUCT_ID ||
             device.productId === 0x006c ||
             device.productId === StreamDeckV2.PRODUCT_ID ||
@@ -410,6 +413,9 @@ class StreamDeck { // eslint-disable-line
     const ctx = canvas.getContext('2d');
     ctx.translate(
         this.#deviceType.ICON_SIZE_HALF, this.#deviceType.ICON_SIZE_HALF);
+    if (this.#deviceType.HRZFLIP) {
+      ctx.scale(-1,1); //horizontal flip
+    }
     ctx.rotate(this.#deviceType.IMAGE_ROTATION * Math.PI / 180);
     ctx.translate(
         this.#deviceType.ICON_SIZE_HALF * -1,
