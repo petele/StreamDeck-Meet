@@ -414,7 +414,7 @@ class StreamDeck { // eslint-disable-line
     ctx.translate(
         this.#deviceType.ICON_SIZE_HALF, this.#deviceType.ICON_SIZE_HALF);
     if (this.#deviceType.HRZFLIP) {
-      ctx.scale(-1,1); //horizontal flip
+      ctx.scale(-1, 1); // horizontal flip
     }
     ctx.rotate(this.#deviceType.IMAGE_ROTATION * Math.PI / 180);
     ctx.translate(

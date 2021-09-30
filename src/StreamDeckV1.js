@@ -14,7 +14,10 @@
  * limitations under the License.
  */
 
-/* Packets/Header logic for V1 Stream Deck from https://github.com/Julusian/node-elgato-stream-deck */
+/*
+  Packets/Header logic for V1 Stream Deck from
+  https://github.com/Julusian/node-elgato-stream-deck
+*/
 
 /* eslint-disable no-invalid-this */
 
@@ -48,8 +51,8 @@ class StreamDeckV1 { // eslint-disable-line
 
     // Meeting
     // cam, cam-disabled
-    'info': 1, 
-    'info-open': 1, 
+    'info': 1,
+    'info-open': 1,
     'users': 9,
     'users-open': 9,
     'chat': 8,
@@ -119,7 +122,7 @@ class StreamDeckV1 { // eslint-disable-line
    * @return {Promise<ArrayBuffer>}
    */
   async getImageBufferFromCanvas(canvas) {
-    //console.log('getImageBufferFromCanvas');
+    // console.log('getImageBufferFromCanvas');
     const blob = CanvasToBMP.toBlob(canvas, false, false);
 
     const buff = await blob.arrayBuffer();
@@ -127,15 +130,15 @@ class StreamDeckV1 { // eslint-disable-line
     return buff;
   }
 
-    /**
+  /**
    * Build packet header
    *
    * @param {ArrayBuffer} header Header buffer
-   * @param {number} partIndex (which part of the two packets for V1 Stream Deck)
-   * @param {number} isLast Is last packet (V1 Stream Deck uses two packets per buffer)
+   * @param {number} partIndex part of the two packets for StreamDeck v1
+   * @param {number} isLast Is last packet (StreamDeckV1 uses 2 packets/buffer)
    * @param {number} buttonId Button ID to draw the image on.
    */
-  buildHeader(header, partIndex, isLast, buttonId) { 
+  buildHeader(header, partIndex, isLast, buttonId) {
     new DataView(header).setUint8(0, 0x02); // report ID
     new DataView(header).setUint8(1, 0x01); // always 1 - set the icon
     new DataView(header).setUint16(2, partIndex, true);
@@ -151,7 +154,6 @@ class StreamDeckV1 { // eslint-disable-line
    * @return {!array}
    */
   getPacketsFromBuffer(buttonId, buffer) {
-
     const packetBytes = buffer.byteLength / 2;
 
     const header1 = new ArrayBuffer(this.#PACKET_HEADER_LENGTH);
@@ -159,14 +161,16 @@ class StreamDeckV1 { // eslint-disable-line
 
     const packet1 = new Uint8Array(this.#PACKET_SIZE);
     packet1.set(new Uint8Array(header1));
-    packet1.set(new Uint8Array(buffer.slice(0,packetBytes)), this.#PACKET_HEADER_LENGTH);
+    const data1 = buffer.slice(0, packetBytes);
+    packet1.set(new Uint8Array(data1), this.#PACKET_HEADER_LENGTH);
 
     const header2 = new ArrayBuffer(this.#PACKET_HEADER_LENGTH);
     this.buildHeader(header2, 0x02, 0x1, buttonId);
 
     const packet2 = new Uint8Array(this.#PACKET_SIZE);
     packet2.set(new Uint8Array(header2));
-    packet2.set(new Uint8Array(buffer.slice(packetBytes,buffer.byteLength)), this.#PACKET_HEADER_LENGTH);
+    const data2 = buffer.slice(packetBytes, buffer.byteLength);
+    packet2.set(new Uint8Array(data2), this.#PACKET_HEADER_LENGTH);
 
     return [packet1, packet2];
   }

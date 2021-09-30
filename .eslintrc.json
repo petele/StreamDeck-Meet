@@ -20,6 +20,7 @@
     "CanvasToBMP": false,
     "chrome": true,
     "StreamDeckMini": false,
+    "StreamDeckV1": false,
     "StreamDeckV2": false
   }
 }

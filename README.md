@@ -1,6 +1,6 @@
 # Meet + StreamDeck Helper
 
-Last Updated: 2021-05-25
+Last Updated: 2021-09-30
 
 ## The problem
 
@@ -18,7 +18,8 @@ programmable 15 key keyboard. Each key is backed with an LCD panel, making it
 easy to customize the buttons for any use. It connects to the computer via
 USB and HID.
 
-Thanks to @jimmc, support for the StreamDeck Mini was added on 2021-05-25.
+* Thanks to @jimmc, who implemented support for the  StreamDeck Mini.
+* Thanks to @alextcowan, who implemented support for the StreamDeck v1.
 
 ### WebHID
 
