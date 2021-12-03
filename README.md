@@ -18,8 +18,8 @@ programmable 15 key keyboard. Each key is backed with an LCD panel, making it
 easy to customize the buttons for any use. It connects to the computer via
 USB and HID.
 
-* Thanks to @jimmc, who implemented support for the  StreamDeck Mini.
-* Thanks to @alextcowan, who implemented support for the StreamDeck v1.
+- Thanks to @jimmc, who implemented support for the StreamDeck Mini.
+- Thanks to @alextcowan, who implemented support for the StreamDeck v1.
 
 ### WebHID
 
@@ -27,8 +27,7 @@ The Chrome team is currently implementing [WebHID](https://web.dev/hid/), which
 will allow pages to interact with HID devices like the StreamDeck.
 
 Because this uses Chrome's WebHID implementation, no device drivers are needed,
-and it works beautifully on ChromeOS, Mac, Windows, and Linux (though I haven't
-tested it there).
+and it works beautifully on ChromeOS, Mac, Windows, and Linux.
 
 ## The implementation
 
@@ -46,37 +45,37 @@ class. I hope to be able to fix that in the near future.
 
 In the lobby, 2 buttons are enabled:
 
-* Start next scheduled meeting.
-* Start instant meeting.
+- Start next scheduled meeting.
+- Start instant meeting.
 
 ### In green room
 
 In the green room, there are three buttons enabled:
 
-* Enter meeting (Join now).
-* Mute/unmute mic.
-* Enable/disable cam.
-* Return to home screen.
+- Enter meeting (Join now).
+- Mute/unmute mic.
+- Enable/disable cam.
+- Return to home screen.
 
 ### In the meeting
 
 While in the meeting, there are sevent buttons enabled:
 
-* Mute/unmute mic.
-* Enable/disable cam.
-* Enable/disable captions (when available).
-* Raise/lower hand (when available).
-* Stop presenting (when applicable).
-* Show/hide meeting info.
-* Show/hide people in meeting.
-* Show/hide chat.
-* Show/hide activities panel (when available).
-* Leave meeting.
+- Mute/unmute mic.
+- Enable/disable cam.
+- Enable/disable captions (when available).
+- Raise/lower hand (when available).
+- Stop presenting (when applicable).
+- Show/hide meeting info.
+- Show/hide people in meeting.
+- Show/hide chat.
+- Show/hide activities panel (when available).
+- Leave meeting.
 
 ### After meeting
 
-* Rejoin meeting.
-* Return to home screen.
+- Rejoin meeting.
+- Return to home screen.
 
 ## Support for Hue Lights
 
@@ -88,11 +87,11 @@ To setup a Hue light, update the following code with your info, and paste
 it into the console.
 
 ```js
-localStorage['msdHue'] = JSON.stringify({
+localStorage["msdHue"] = JSON.stringify({
   address: "IP address of your hub",
   apiKey: "API key to access the hub",
   lightId: "1",
-  autoOn: true
+  autoOn: true,
 });
 ```
 
@@ -115,10 +114,30 @@ If everything worked, the StreamDeck should now be connected and your buttons
 should have updated to support starting instant meetings. Chrome will remember
 the connection, so you don't need to run the connect step again in the future.
 
+## Prerequisite for Linux
+
+On Linux, the udev subsystem blocks access to the StreamDeck without some special configuration. Save the following to `/etc/udev/rules.d/50-elgato.rules` and reload the rules with `sudo udevadm control --reload-rules`
+
+```
+SUBSYSTEM=="input", GROUP="input", MODE="0666"
+SUBSYSTEM=="usb", ATTRS{idVendor}=="0fd9", ATTRS{idProduct}=="0060", MODE:="666", GROUP="plugdev"
+SUBSYSTEM=="usb", ATTRS{idVendor}=="0fd9", ATTRS{idProduct}=="0063", MODE:="666", GROUP="plugdev"
+SUBSYSTEM=="usb", ATTRS{idVendor}=="0fd9", ATTRS{idProduct}=="006c", MODE:="666", GROUP="plugdev"
+SUBSYSTEM=="usb", ATTRS{idVendor}=="0fd9", ATTRS{idProduct}=="006d", MODE:="666", GROUP="plugdev"
+SUBSYSTEM=="usb", ATTRS{idVendor}=="0fd9", ATTRS{idProduct}=="0080", MODE:="666", GROUP="plugdev"
+KERNEL=="hidraw*", ATTRS{busnum}=="1", ATTRS{idVendor}=="0fd9", ATTRS{idProduct}=="0060", MODE="0666"
+KERNEL=="hidraw*", ATTRS{busnum}=="1", ATTRS{idVendor}=="0fd9", ATTRS{idProduct}=="0063", MODE="0666"
+KERNEL=="hidraw*", ATTRS{busnum}=="1", ATTRS{idVendor}=="0fd9", ATTRS{idProduct}=="006c", MODE="0666"
+KERNEL=="hidraw*", ATTRS{busnum}=="1", ATTRS{idVendor}=="0fd9", ATTRS{idProduct}=="006d", MODE="0666"
+KERNEL=="hidraw*", ATTRS{busnum}=="1", ATTRS{idVendor}=="0fd9", ATTRS{idProduct}=="0080", MODE="0666"
+```
+
+Unplug and replug the device and it should be usable
+
 ## Caveats
 
-* This is a proof of concept, and experiment for me to better learn the WebHID
+- This is a proof of concept, and experiment for me to better learn the WebHID
   API, there **are** bugs.
-* After closing the page/navigating away, the buttons will likely remain
+- After closing the page/navigating away, the buttons will likely remain
   unchanged, and clicking them won't do anything. Once you open Meet again,
   they'll start working.
