@@ -94,7 +94,7 @@ class MeetWrapper { // eslint-disable-line
       return;
     }
     this.#currentRoom = this.#ROOM_NAMES.lobby;
-    console.log('-ENTER-', this.#currentRoom);
+    console.log('*SD-Meet*', 'Room:', this.#currentRoom);
 
     this.#resetButtons();
     this.#drawHueButtons();
@@ -115,7 +115,7 @@ class MeetWrapper { // eslint-disable-line
       return;
     }
     this.#currentRoom = this.#ROOM_NAMES.greenRoom;
-    console.log('-ENTER-', this.#currentRoom);
+    console.log('*SD-Meet*', 'Room:', this.#currentRoom);
 
     this.#resetButtons();
     this.#drawHueButtons();
@@ -144,7 +144,7 @@ class MeetWrapper { // eslint-disable-line
       return;
     }
     this.#currentRoom = this.#ROOM_NAMES.meeting;
-    console.log('-ENTER-', this.#currentRoom);
+    console.log('*SD-Meet*', 'Room:', this.#currentRoom);
 
     this.#resetButtons();
     this.#drawHueButtons();
@@ -185,7 +185,7 @@ class MeetWrapper { // eslint-disable-line
       return;
     }
     this.#currentRoom = this.#ROOM_NAMES.exitHall;
-    console.log('-ENTER-', this.#currentRoom);
+    console.log('*SD-Meet*', 'Room:', this.#currentRoom);
 
     this.#resetButtons();
     this.#drawHueButtons();
@@ -303,7 +303,7 @@ class MeetWrapper { // eslint-disable-line
     }
     const buttonId = this.#streamDeck.buttonNameToId(iconName);
     if (buttonId === undefined || buttonId < 0) {
-      console.warn(`drawButton failed, unknown icon name: '${iconName}'`);
+      console.warn('*SD-Meet*', `drawButton failed, unknown icon name: '${iconName}'`);
       return; // Not defined in the current configuration.
     }
     const iconURL = chrome.runtime.getURL(`ico-svg/${iconName}.svg`);
@@ -876,6 +876,21 @@ class MeetWrapper { // eslint-disable-line
    */
 
   /**
+   * Wrapper for clicking on a button with logging if the button cannot be
+   * found.
+   *
+   * @param {Element} button Button to click
+   * @param {?String} buttName Name of button (used for logging only)
+   */
+  #tapButtonWrapper(button, buttName) {
+    if (button) {
+      button.click();
+      return;
+    }
+    console.warn('*SD-Meet*', `Unable to find/click button '${buttName}'`);
+  }
+
+  /**
    * Toggles the tab between full screen and regular.
    */
   async #toggleFullScreen() {
@@ -896,9 +911,7 @@ class MeetWrapper { // eslint-disable-line
    */
   #tapStartInstantMeeting() {
     const button = this.#getStartInstantMeetingButton();
-    if (button) {
-      button.click();
-    }
+    this.#tapButtonWrapper(button, 'startInstant');
   }
 
   /**
@@ -906,9 +919,7 @@ class MeetWrapper { // eslint-disable-line
    */
   #tapStartNextMeeting() {
     const button = this.#getStartNextMeetingButton();
-    if (button) {
-      button.click();
-    }
+    this.#tapButtonWrapper(button, 'startNext');
   }
 
   /**
@@ -916,9 +927,7 @@ class MeetWrapper { // eslint-disable-line
    */
   #tapGreenRoomMic() {
     const button = this.#getGreenRoomMicButton();
-    if (button) {
-      button.click();
-    }
+    this.#tapButtonWrapper(button, 'greenMic');
   }
 
   /**
@@ -926,9 +935,7 @@ class MeetWrapper { // eslint-disable-line
    */
   #tapGreenRoomCam() {
     const button = this.#getGreenRoomCamButton();
-    if (button) {
-      button.click();
-    }
+    this.#tapButtonWrapper(button, 'greenCam');
   }
 
   /**
@@ -936,9 +943,7 @@ class MeetWrapper { // eslint-disable-line
    */
   #tapEnterMeeting() {
     const button = this.#getEnterMeetingButton();
-    if (button) {
-      button.click();
-    }
+    this.#tapButtonWrapper(button, 'enterMeeting');
   }
 
   /**
@@ -946,9 +951,7 @@ class MeetWrapper { // eslint-disable-line
    */
   #tapMic() {
     const button = this.#getMicButton();
-    if (button) {
-      button.click();
-    }
+    this.#tapButtonWrapper(button, 'micOnOff');
   }
 
   /**
@@ -956,9 +959,7 @@ class MeetWrapper { // eslint-disable-line
    */
   #tapCam() {
     const button = this.#getCamButton();
-    if (button) {
-      button.click();
-    }
+    this.#tapButtonWrapper(button, 'camOnOff');
   }
 
   /**
@@ -966,9 +967,7 @@ class MeetWrapper { // eslint-disable-line
    */
   #tapHand() {
     const button = this.#getHandButton();
-    if (button) {
-      button.click();
-    }
+    this.#tapButtonWrapper(button, 'hand');
   }
 
   /**
@@ -976,9 +975,7 @@ class MeetWrapper { // eslint-disable-line
    */
   #tapCC() {
     const button = this.#getCCButton();
-    if (button) {
-      button.click();
-    }
+    this.#tapButtonWrapper(button, 'cc');
   }
 
   /**
@@ -986,9 +983,7 @@ class MeetWrapper { // eslint-disable-line
    */
   #tapInfo() {
     const button = this.#getInfoButton();
-    if (button) {
-      button.click();
-    }
+    this.#tapButtonWrapper(button, 'info');
   }
 
   /**
@@ -996,9 +991,7 @@ class MeetWrapper { // eslint-disable-line
    */
   #tapUsers() {
     const button = this.#getPeopleButton();
-    if (button) {
-      button.click();
-    }
+    this.#tapButtonWrapper(button, 'people');
   }
 
   /**
@@ -1006,9 +999,7 @@ class MeetWrapper { // eslint-disable-line
    */
   #tapChat() {
     const button = this.#getChatButton();
-    if (button) {
-      button.click();
-    }
+    this.#tapButtonWrapper(button, 'chat');
   }
 
   /**
@@ -1016,9 +1007,7 @@ class MeetWrapper { // eslint-disable-line
    */
   #tapActivities() {
     const button = this.#getActivitiesButton();
-    if (button) {
-      button.click();
-    }
+    this.#tapButtonWrapper(button, 'activities');
   }
 
   /**
@@ -1026,9 +1015,7 @@ class MeetWrapper { // eslint-disable-line
    */
   #tapStopPresenting() {
     const button = this.#getStopPresentingButton();
-    if (button) {
-      button.click();
-    }
+    this.#tapButtonWrapper(button, 'stopPresenting');
   }
 
   /**
@@ -1036,6 +1023,8 @@ class MeetWrapper { // eslint-disable-line
    */
   #tapCloseInfoDialog() {
     const button = this.#getMeetingInfoDialogCloseButton();
+    // We most likely don't care if this isn't open, if it is, close it
+    // but no need to log that we couldn't find it.
     if (button) {
       button.click();
     }
@@ -1046,9 +1035,7 @@ class MeetWrapper { // eslint-disable-line
    */
   #tapHangUp() {
     const button = this.#getHangupButton();
-    if (button) {
-      button.click();
-    }
+    this.#tapButtonWrapper(button, 'hangUp');
   }
 
   /**
@@ -1056,9 +1043,7 @@ class MeetWrapper { // eslint-disable-line
    */
   #tapRejoin() {
     const button = this.#getRejoinButton();
-    if (button) {
-      button.click();
-    }
+    this.#tapButtonWrapper(button, 'reJoin');
   }
 
   /**
@@ -1066,8 +1051,6 @@ class MeetWrapper { // eslint-disable-line
    */
   #tapHome() {
     const button = this.#getReturnToHomeButton();
-    if (button) {
-      button.click();
-    }
+    this.#tapButtonWrapper(button, 'returnToHome');
   }
 }

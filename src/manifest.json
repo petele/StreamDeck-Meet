@@ -1,6 +1,6 @@
 {
   "name": "StreamDeck-Meet",
-  "version": "0.78",
+  "version": "0.79",
   "description": "StreamDeck helper for Google Meet",
   "manifest_version": 2,
   "content_scripts": [
