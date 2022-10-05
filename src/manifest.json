@@ -1,8 +1,8 @@
 {
   "name": "StreamDeck-Meet",
-  "version": "0.79",
+  "version": "0.80",
   "description": "StreamDeck helper for Google Meet",
-  "manifest_version": 2,
+  "manifest_version": 3,
   "content_scripts": [
     {
       "matches": ["https://meet.google.com/*"],
@@ -13,12 +13,14 @@
         "StreamDeckMini.js",
         "StreamDeckV1.js",
         "StreamDeckV2.js",
+        "StreamDeckXL.js",
         "MeetWrapper.js",
         "main.js"
       ]
     }
   ],
-  "web_accessible_resources": [
-    "ico-svg/*"
-  ]
+  "web_accessible_resources": [{
+    "resources": ["ico-svg/*"],
+    "matches": ["https://meet.google.com/*"]
+  }]
 }

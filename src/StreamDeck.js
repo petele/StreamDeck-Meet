@@ -114,6 +114,9 @@ class StreamDeck { // eslint-disable-line
       case StreamDeckV2.PRODUCT_ID:
         this.#deviceType = new StreamDeckV2();
         break;
+      case StreamDeckXL.PRODUCT_ID:
+        this.#deviceType = new StreamDeckXL();
+        break;
       default:
         console.warn('StreamDeck product ID', this.#device.productId, 'is not tested'); // eslint-disable-line
         this.#deviceType = new StreamDeckV2();
@@ -175,7 +178,7 @@ class StreamDeck { // eslint-disable-line
       const opts = {filters: [
         {vendorId: 0x0fd9, productId: StreamDeckV1.PRODUCT_ID}, // Original
         {vendorId: 0x0fd9, productId: StreamDeckMini.PRODUCT_ID}, // Mini
-        {vendorId: 0x0fd9, productId: 0x006c}, // XL
+        {vendorId: 0x0fd9, productId: StreamDeckXL.PRODUCT_ID}, // XL
         {vendorId: 0x0fd9, productId: StreamDeckV2.PRODUCT_ID}, // V2
         {vendorId: 0x0fd9, productId: 0x0080}, // MK.2
       ]};
@@ -196,7 +199,7 @@ class StreamDeck { // eslint-disable-line
       if (device.vendorId === 0x0fd9) {
         if (device.productId === StreamDeckV1.PRODUCT_ID ||
             device.productId === StreamDeckMini.PRODUCT_ID ||
-            device.productId === 0x006c ||
+            device.productId === StreamDeckXL.PRODUCT_ID ||
             device.productId === StreamDeckV2.PRODUCT_ID ||
             device.productId === 0x0080) {
           return device;
