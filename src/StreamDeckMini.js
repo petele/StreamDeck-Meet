@@ -45,11 +45,11 @@ class StreamDeckMini { // eslint-disable-line
 
     // Meeting
     // cam, cam-disabled
-    'cc': 6,
-    'cc-on': 6,
+    'cc': -1,
+    'cc-on': -1,
     'chat': 3,
     'chat-open': 3,
-    'end-call': -1,
+    'end-call': 6,
     'hand': 5,
     'hand-raised': 5,
     // mic, mic-disabled
