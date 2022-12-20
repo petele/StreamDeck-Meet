@@ -104,6 +104,7 @@ class StreamDeck { // eslint-disable-line
     if (!this.#device) {
       return false;
     }
+    console.log('*SD-Meet*', `Found StreamDeck '${this.#device.productId}'`);
     switch (this.#device.productId) {
       case StreamDeckMini.PRODUCT_ID:
         this.#deviceType = new StreamDeckMini();
@@ -118,15 +119,21 @@ class StreamDeck { // eslint-disable-line
         this.#deviceType = new StreamDeckXL();
         break;
       default:
-        console.warn('StreamDeck product ID', this.#device.productId, 'is not tested'); // eslint-disable-line
+        console.warn('*SD-Meet*', 'Product ID', this.#device.productId, 'is not tested'); // eslint-disable-line
         this.#deviceType = new StreamDeckV2();
         break;
     }
     if (this.#device.opened) {
       return true;
     }
-    // Open and reset the device.
-    await this.#device.open();
+
+    // Open the HID device.
+    try {
+      await this.#device.open();
+    } catch (ex) {
+      console.error('*SD-Meet*', 'Error opening HID device', ex);
+      throw ex;
+    }
 
     // Initialize the KeyState oobject
     this.#keyState = new Array(this.#deviceType.NUM_KEYS).fill(false);
