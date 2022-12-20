@@ -27,7 +27,7 @@ class MacropadGB4 { // eslint-disable-line
   // https://github.com/JackPikatea/vial-qmk/blob/vial/keyboards/pikatea/pikatea_macropad_gb4/config.h
   static PRODUCT_ID = 0x001B;
 
-  // We only have 6 buttons in the Mini, so a lot of
+  // We only have 63 to 7 buttons in the Macropad, so a lot of
   // buttons don't get displayed (-1).
   buttonNameToIdMap = {
     // All rooms
@@ -39,11 +39,11 @@ class MacropadGB4 { // eslint-disable-line
     'start-next': -1,
 
     // Green Room
-    'cam': 1,
-    'cam-disabled': 1,
+    'cam': 2,
+    'cam-disabled': 2,
     'enter-meeting': -1,
-    'mic': 3,
-    'mic-disabled': 3,
+    'mic': 1,
+    'mic-disabled': 1,
 
     // Meeting
     // cam, cam-disabled
@@ -52,8 +52,8 @@ class MacropadGB4 { // eslint-disable-line
     'chat': -1,
     'chat-open': -1,
     'end-call': -1,
-    'hand': -1,
-    'hand-raised': -1,
+    'hand': 3,
+    'hand-raised': 3,
     // mic, mic-disabled
     'present-stop': -1,
     'blank': -1,
@@ -65,17 +65,25 @@ class MacropadGB4 { // eslint-disable-line
     'rejoin': -1,
   };
 
-  OFFSET = 1;
-  ID_OFFSET = 1;
-  NUM_KEYS = 6;
-  ICON_SIZE = 80;
+  // Macropad input report values to keyIndex
+  keyValueToIdMap = {
+    182: 1,
+    205: 2,
+    181: 3,
+  }
+
+  OFFSET = 0;
+  ID_OFFSET = 0;
+  // eslint-disable-next-line max-len
+  NUM_KEYS = 7; // The 3-key, 5-key, and 7-key hardware all expose themselves as 7 key. https://docs.pikatea.com/PikateaMacropadGB4/#programming-and-usage
+  ICON_SIZE = 0;
   ICON_SIZE_HALF = this.ICON_SIZE / 2;
   IMAGE_ROTATION = -90;
   HRZFLIP = 0;
 
-  #PACKET_SIZE = 1024;
-  #PACKET_HEADER_LENGTH = 16;
-  #MAX_PAYLOAD_LENGTH = this.#PACKET_SIZE - this.#PACKET_HEADER_LENGTH;
+  // #PACKET_SIZE = 1024;
+  // #PACKET_HEADER_LENGTH = 16;
+  // #MAX_PAYLOAD_LENGTH = this.#PACKET_SIZE - this.#PACKET_HEADER_LENGTH;
 
 
   /**
@@ -85,27 +93,26 @@ class MacropadGB4 { // eslint-disable-line
   }
 
   /**
-   * Set the brightness of the StreamDeck panel.
+   * Set the brightness of the macropad panel.
    *
-   * @param {object} device StreamDeck device object
+   * @param {object} device macropad device object
    * @param {number} percentage 1-100
    * @return {?Promise<ArrayBuffer>}
    */
   setBrightness(device, percentage) {
-    const data = new Uint8Array([0x08, percentage]);
-    return device.sendFeatureReport(0x03, data);
+    // TODO figure this out
+    // const data = new Uint8Array([0x08, percentage]);
+    // return device.sendFeatureReport(0x03, data);
   }
 
   /**
-   * Reset the StreamDeck device.
+   * Reset the macropad device.
    *
-   * @param {object} device StreamDeck device object
+   * @param {object} device macropad device object
    * @return {?Promise<ArrayBuffer>}
    */
   async reset(device) {
-    const arr = [0x63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-    const data = new Uint8Array(arr);
-    return device.sendFeatureReport(0x0b, data);
+    // No reset needed (I think)
   }
 
   /**
@@ -115,17 +122,6 @@ class MacropadGB4 { // eslint-disable-line
    * @return {Promise<ArrayBuffer>}
    */
   async getImageBufferFromCanvas(canvas) {
-
-    /*
-    // For debugging, write out a file
-    const directoryHandle = await window.showDirectoryPicker();
-    const opts = {create: true};
-    const fileHandle = await directoryHandle.getFileHandle('temp.bmp', opts);
-    const writable = await fileHandle.createWritable();
-    await writable.write({type: 'write', data: buff});
-    await writable.close();
-    */
-
     return new ArrayBuffer();
   }
 
@@ -137,36 +133,6 @@ class MacropadGB4 { // eslint-disable-line
    * @return {!array}
    */
   getPacketsFromBuffer(buttonId, buffer) {
-    const packets = [];
-
-    // let page = 0;
-    // let start = 0;
-    // let bytesRemaining = buffer.byteLength;
-
-    // while (bytesRemaining > 0) {
-    //   const byteCount = Math.min(bytesRemaining, this.#MAX_PAYLOAD_LENGTH);
-    //   const isLastPacket = bytesRemaining <= this.#MAX_PAYLOAD_LENGTH;
-    //   const header = new ArrayBuffer(this.#PACKET_HEADER_LENGTH);
-
-    //   new DataView(header).setUint8(0, 0x02); // report ID
-    //   new DataView(header).setUint8(1, 0x01); // always 1 - set the icon
-    //   new DataView(header).setUint16(2, page++, true);
-    //   new DataView(header).setUint8(4, isLastPacket ? 1 : 0); // is last packet
-    //   new DataView(header).setUint8(5, buttonId); // button
-    //   // leave the rest zero
-
-    //   const end = start + byteCount;
-    //   const packet = new Uint8Array(this.#PACKET_SIZE);
-    //   packet.set(new Uint8Array(header));
-    //   packet.set(
-    //       new Uint8Array(buffer.slice(start, end)),
-    //       this.#PACKET_HEADER_LENGTH);
-
-    //   start = end;
-    //   bytesRemaining = bytesRemaining - byteCount;
-
-    //   packets.push(packet);
-    // }
-    return packets;
+    return [];
   }
 }
