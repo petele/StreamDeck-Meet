@@ -118,6 +118,9 @@ class StreamDeck { // eslint-disable-line
       case StreamDeckXL.PRODUCT_ID:
         this.#deviceType = new StreamDeckXL();
         break;
+      case MacropadGB4.PRODUCT_ID:
+        this.#deviceType = new MacropadGB4();
+        break;
       default:
         console.warn('*SD-Meet*', 'Product ID', this.#device.productId, 'is not tested'); // eslint-disable-line
         this.#deviceType = new StreamDeckV2();
@@ -188,6 +191,7 @@ class StreamDeck { // eslint-disable-line
         {vendorId: 0x0fd9, productId: StreamDeckXL.PRODUCT_ID}, // XL
         {vendorId: 0x0fd9, productId: StreamDeckV2.PRODUCT_ID}, // V2
         {vendorId: 0x0fd9, productId: 0x0080}, // MK.2
+        {vendorId: 0x5049, productId: 0x001B}, // Macropad GB4
       ]};
       const devices = await navigator.hid.requestDevice(opts);
       return devices[0];
@@ -211,6 +215,8 @@ class StreamDeck { // eslint-disable-line
             device.productId === 0x0080) {
           return device;
         }
+      } else if (device.vendorId === 0x5049 && device.productId === 0x001B) {
+        return device;
       }
     }
     return null;
