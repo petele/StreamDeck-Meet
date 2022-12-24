@@ -218,7 +218,10 @@ class StreamDeck { // eslint-disable-line
             device.productId === 0x0080) {
           return device;
         }
-      } else if (device.vendorId === 0x5049 && device.productId === 0x001B) {
+      } else if (
+        device.vendorId === 0x5049 && device.productId === 0x001B &&
+        device.collections.some((coll) => coll.usagePage === 0x000c)
+      ) {
         return device;
       }
     }
