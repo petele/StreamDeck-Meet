@@ -143,7 +143,7 @@ class StreamDeck { // eslint-disable-line
 
     // Add event listener for key presses.
     this.#device.addEventListener('inputreport', (event) => {
-      if (event.device.vendorId && 0x0fd9 && event.reportId === 0x01) {
+      if (event.device.vendorId == 0x0fd9 && event.reportId === 0x01) {
         this.#onButtonPushed(event.data.buffer);
       } else if (event.device.vendorId === 0x5049 && event.reportId === 0x04) {
         this.#onMacropadKeyPushed(event);
