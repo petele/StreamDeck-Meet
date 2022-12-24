@@ -27,8 +27,8 @@ class MacropadGB4 { // eslint-disable-line
   // https://github.com/JackPikatea/vial-qmk/blob/vial/keyboards/pikatea/pikatea_macropad_gb4/config.h
   static PRODUCT_ID = 0x001B;
 
-  // We only have 63 to 7 buttons in the Macropad, so a lot of
-  // buttons don't get displayed (-1).
+  // We only have 3 (or 5 or 7) keys on the Macropad,
+  // so many actions arent available.
   buttonNameToIdMap = {
     // All rooms
     'light-off': -1,
@@ -41,7 +41,7 @@ class MacropadGB4 { // eslint-disable-line
     // Green Room
     'cam': 2,
     'cam-disabled': 2,
-    'enter-meeting': -1,
+    'enter-meeting': 3,
     'mic': 1,
     'mic-disabled': 1,
 
@@ -61,15 +61,15 @@ class MacropadGB4 { // eslint-disable-line
     'users-open': -1,
 
     // Exit Hall
-    'home': -1,
+    'home': 3,
     'rejoin': -1,
   };
 
   // Macropad input report values to keyIndex
   keyValueToIdMap = {
-    182: 1,
-    205: 2,
-    181: 3,
+    182: 1, // First key (prev track)
+    205: 2, // Second key (play/pause)
+    181: 3, // Third key (next track)
   }
 
   OFFSET = 0;
@@ -97,12 +97,9 @@ class MacropadGB4 { // eslint-disable-line
    *
    * @param {object} device macropad device object
    * @param {number} percentage 1-100
-   * @return {?Promise<ArrayBuffer>}
    */
   setBrightness(device, percentage) {
     // TODO figure this out
-    // const data = new Uint8Array([0x08, percentage]);
-    // return device.sendFeatureReport(0x03, data);
   }
 
   /**
