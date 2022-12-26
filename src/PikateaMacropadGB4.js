@@ -70,7 +70,7 @@ class MacropadGB4 { // eslint-disable-line
     182: 1, // First key (prev track)
     205: 2, // Second key (play/pause)
     181: 3, // Third key (next track)
-  }
+  };
 
   OFFSET = 0;
   ID_OFFSET = 0;
@@ -80,11 +80,6 @@ class MacropadGB4 { // eslint-disable-line
   ICON_SIZE_HALF = this.ICON_SIZE / 2;
   IMAGE_ROTATION = -90;
   HRZFLIP = 0;
-
-  // #PACKET_SIZE = 1024;
-  // #PACKET_HEADER_LENGTH = 16;
-  // #MAX_PAYLOAD_LENGTH = this.#PACKET_SIZE - this.#PACKET_HEADER_LENGTH;
-
 
   /**
    * Constructor
@@ -99,7 +94,7 @@ class MacropadGB4 { // eslint-disable-line
    * @param {number} percentage 1-100
    */
   setBrightness(device, percentage) {
-    // TODO figure this out
+    // TODO determine rawHID equivalent
   }
 
   /**
@@ -109,7 +104,7 @@ class MacropadGB4 { // eslint-disable-line
    * @return {?Promise<ArrayBuffer>}
    */
   async reset(device) {
-    // No reset needed (I think)
+    // No reset needed
   }
 
   /**
