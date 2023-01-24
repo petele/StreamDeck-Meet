@@ -27,7 +27,7 @@ const sdConnectButtonID = 'streamDeckHelperConnect';
  * Adds a Connect to StreamDeck button to the page.
  */
 function addConnectButton() {
-  if (window.location.pathname !== '/') {
+  if (window.location.pathname !== '/' && window.location.pathname !== '/landing') {
     return;
   }
   const elem = document.createElement('button');
