@@ -164,6 +164,7 @@ class MeetWrapper { // eslint-disable-line
       this.#setupChatButton();
       this.#setupActivitiesButton();
       this.#setupPresentingButton();
+      this.#setupReactionButton();
     }, 500);
 
     // If it was an instant meeting, automatically close
@@ -211,6 +212,8 @@ class MeetWrapper { // eslint-disable-line
    * @param {number} buttonId Button ID of the button that was pressed.
    */
   #handleStreamDeckPress(buttonId) {
+    console.log('*SD-Meet*', 'Button Pressed', buttonId);
+
     // Hue light buttons, used in all rooms.
     if (this.#hueLights) {
       if (buttonId === this.#streamDeck.buttonNameToId('light-on')) {
@@ -256,7 +259,9 @@ class MeetWrapper { // eslint-disable-line
 
     // Available while in the meeting room.
     if (this.#currentRoom === this.#ROOM_NAMES.meeting) {
-      if (buttonId === this.#streamDeck.buttonNameToId('info')) {
+      if (buttonId === this.#streamDeck.buttonNameToId('reaction')) {
+        this.#tapReactions();
+      } else if (buttonId === this.#streamDeck.buttonNameToId('info')) {
         this.#tapInfo();
       } else if (buttonId === this.#streamDeck.buttonNameToId('users')) {
         this.#tapUsers();
@@ -489,6 +494,21 @@ class MeetWrapper { // eslint-disable-line
   }
 
   /**
+   * Setup the meeting room send a reaction button.
+   */
+  #setupReactionButton() {
+    const button = this.#getReactionButton();
+    if (!button) {
+      return;
+    }
+    const observer = new MutationObserver(() => {
+      this.#updateReactionButton();
+    });
+    observer.observe(button, {attributeFilter: ['aria-pressed']});
+    this.#updateReactionButton();
+  }
+
+  /**
    * Setup the green room mic button.
    */
   #setupGreenRoomMicButton() {
@@ -640,6 +660,19 @@ class MeetWrapper { // eslint-disable-line
   }
 
   /**
+   * Update the StreamDeck Send a Reaction button to indicate current state.
+   */
+  #updateReactionButton() {
+    const button = this.#getReactionButton();
+    if (!button) {
+      return;
+    }
+    const newVal = button.getAttribute('aria-pressed') == 'true';
+    const img = newVal ? 'reaction-open' : 'reaction';
+    this.#drawButton(img);
+  }
+
+  /**
    * Update the StreamDeck mic button (green room) to indicate current state.
    */
   #updateGreenRoomMicButton() {
@@ -755,7 +788,7 @@ class MeetWrapper { // eslint-disable-line
    * @return {?Element}
    */
   #getCCButton() {
-    const sel = '[jscontroller=U1Cub]';
+    const sel = '[jscontroller=iBwifb]';
     return document.querySelector(sel)?.querySelector('button');
   }
 
@@ -816,6 +849,37 @@ class MeetWrapper { // eslint-disable-line
    */
   #getActivitiesButton() {
     const sel = '[data-panel-id="10"]';
+    return document.querySelector(sel);
+  }
+
+  /**
+   * Gets the Send a reaction button in the meeting room.
+   *
+   * @return {?Element}
+   */
+  #getReactionButton() {
+    const sel = '[jscontroller=aTG8jc]';
+    return document.querySelector(sel)?.querySelector('button');
+  }
+
+  /**
+   * Gets the Send a reaction bar in the meeting room.
+   *
+   * @return {?Element}
+   */
+  #getReactionBar() {
+    const sel = '[jscontroller=tdX73b]';
+    return document.querySelector(sel);
+  }
+
+  /**
+   * Gets the send a reaction emoji button in the meeting room.
+   *
+   * @param {string} emoji Emoji to find
+   * @return {?Element}
+   */
+  #getReactionEmojiButton(emoji) {
+    const sel = `[aria-label=${emoji}]`;
     return document.querySelector(sel);
   }
 
@@ -1008,6 +1072,14 @@ class MeetWrapper { // eslint-disable-line
   #tapActivities() {
     const button = this.#getActivitiesButton();
     this.#tapButtonWrapper(button, 'activities');
+  }
+
+  /**
+   * Taps the Send a reaction button, to toggle reaction panel (meeting room).
+   */
+  #tapReactions() {
+    const button = this.#getReactionButton();
+    this.#tapButtonWrapper(button, 'reactions');
   }
 
   /**

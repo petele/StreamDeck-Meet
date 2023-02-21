@@ -25,8 +25,12 @@
 class StreamDeckMini { // eslint-disable-line
   static PRODUCT_ID = 0x0063;
 
-  // We only have 6 buttons in the Mini, so a lot of
-  // buttons don't get displayed (-1).
+  /*
+    2 rows with 3 buttons
+    Top Left =  (unknown),
+    Bottom Right = (unknown)
+  */
+
   buttonNameToIdMap = {
     // All rooms
     'light-off': -1,
@@ -44,15 +48,15 @@ class StreamDeckMini { // eslint-disable-line
     'mic-disabled': 4,
 
     // Meeting
-    // cam, cam-disabled
-    'cc': 6,
-    'cc-on': 6,
+    'cc': -1,
+    'cc-on': -1,
+    'reaction': 6,
+    'reaction-open': 6,
     'chat': 3,
     'chat-open': 3,
     'end-call': -1,
     'hand': 5,
     'hand-raised': 5,
-    // mic, mic-disabled
     'present-stop': -1,
     'blank': -1,
     'users': 2,

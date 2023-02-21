@@ -25,10 +25,16 @@
 class StreamDeckXL { // eslint-disable-line
   static PRODUCT_ID = 0x006c;
 
+  /*
+    4 rows with 8 buttons
+    Top Left =  (unknown),
+    Bottom Right = (unknown)
+  */
+
   buttonNameToIdMap = {
     // All rooms
-    'light-on': 6,
-    'light-off': 7,
+    'light-on': -1,
+    'light-off': -1,
     'fullscreen-on': 5,
     'fullscreen-off': 5,
     'fullscreen-disabled': 5,
@@ -45,7 +51,8 @@ class StreamDeckXL { // eslint-disable-line
     'cam-disabled': 17,
 
     // Meeting
-    // cam, cam-disabled
+    'reaction': 6,
+    'reaction-open': 6,
     'info': 8,
     'info-open': 8,
     'users': 9,
