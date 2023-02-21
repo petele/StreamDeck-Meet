@@ -16,9 +16,8 @@
 
 'use strict';
 
-/* global MeetWrapper, StreamDeck, HueLights */
+/* global MeetWrapper, StreamDeck */
 
-const hueLights = new HueLights();
 const streamDeck = new StreamDeck();
 const sdConnectButtonID = 'streamDeckHelperConnect';
 
@@ -55,7 +54,7 @@ function startWrapper() {
     if (elem) {
       elem.remove();
     }
-    new MeetWrapper(streamDeck, hueLights);
+    new MeetWrapper(streamDeck);
     return true;
   }
   addConnectButton();

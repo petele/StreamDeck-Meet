@@ -32,10 +32,6 @@ class StreamDeckMini { // eslint-disable-line
   */
 
   buttonNameToIdMap = {
-    // All rooms
-    'light-off': -1,
-    'light-on': -1,
-
     // Lobby
     'start-instant': 6,
     'start-next': 5,

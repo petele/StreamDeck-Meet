@@ -33,8 +33,6 @@ class StreamDeckXL { // eslint-disable-line
 
   buttonNameToIdMap = {
     // All rooms
-    'light-on': -1,
-    'light-off': -1,
     'fullscreen-on': 5,
     'fullscreen-off': 5,
     'fullscreen-disabled': 5,

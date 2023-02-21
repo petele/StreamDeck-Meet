@@ -30,23 +30,17 @@ class MeetWrapper { // eslint-disable-line
   };
 
   #streamDeck;
-  #hueLights;
 
   /**
    * Constructor
    *
    * @param {HIDDevice} streamDeck
-   * @param {HueHelper} hueLights
    */
-  constructor(streamDeck, hueLights) {
+  constructor(streamDeck) {
     this.#streamDeck = streamDeck;
     this.#streamDeck.addEventListener('keydown', (evt) => {
       this.#handleStreamDeckPress(evt.detail.buttonId);
     });
-
-    if (hueLights?.isAvailable) {
-      this.#hueLights = hueLights;
-    }
 
     window.addEventListener('fullscreenchange', () => {
       this.#drawFullScreenButton();
@@ -97,14 +91,9 @@ class MeetWrapper { // eslint-disable-line
     console.log('*SD-Meet*', 'Room:', this.#currentRoom);
 
     this.#resetButtons();
-    this.#drawHueButtons();
     this.#drawFullScreenButton();
     this.#drawButton(`start-next`);
     this.#drawButton(`start-instant`);
-
-    if (this.#hueLights?.auto) {
-      this.#hueLights.on(false);
-    }
   }
 
   /**
@@ -118,7 +107,6 @@ class MeetWrapper { // eslint-disable-line
     console.log('*SD-Meet*', 'Room:', this.#currentRoom);
 
     this.#resetButtons();
-    this.#drawHueButtons();
     this.#drawFullScreenButton();
     this.#drawButton(`enter-meeting`);
     this.#drawButton(`home`);
@@ -130,10 +118,6 @@ class MeetWrapper { // eslint-disable-line
       this.#setupGreenRoomMicButton();
       this.#setupGreenRoomCamButton();
     }, 500);
-
-    if (this.#hueLights?.auto) {
-      this.#hueLights.on(true);
-    }
   }
 
   /**
@@ -147,7 +131,6 @@ class MeetWrapper { // eslint-disable-line
     console.log('*SD-Meet*', 'Room:', this.#currentRoom);
 
     this.#resetButtons();
-    this.#drawHueButtons();
     this.#drawFullScreenButton();
     this.#drawButton(`end-call`);
 
@@ -172,10 +155,6 @@ class MeetWrapper { // eslint-disable-line
     setTimeout(() => {
       this.#tapCloseInfoDialog();
     }, 10 * 1000);
-
-    if (this.#hueLights?.auto) {
-      this.#hueLights.on(true);
-    }
   }
 
   /**
@@ -189,14 +168,9 @@ class MeetWrapper { // eslint-disable-line
     console.log('*SD-Meet*', 'Room:', this.#currentRoom);
 
     this.#resetButtons();
-    this.#drawHueButtons();
     this.#drawFullScreenButton();
     this.#drawButton(`rejoin`);
     this.#drawButton(`home`);
-
-    if (this.#hueLights?.auto) {
-      this.#hueLights.on(false);
-    }
   }
 
 
@@ -213,18 +187,6 @@ class MeetWrapper { // eslint-disable-line
    */
   #handleStreamDeckPress(buttonId) {
     console.log('*SD-Meet*', 'Button Pressed', buttonId);
-
-    // Hue light buttons, used in all rooms.
-    if (this.#hueLights) {
-      if (buttonId === this.#streamDeck.buttonNameToId('light-on')) {
-        this.#hueLights.on(true);
-        return;
-      }
-      if (buttonId === this.#streamDeck.buttonNameToId('light-off')) {
-        this.#hueLights.on(false);
-        return;
-      }
-    }
 
     // Toggle full screen, used in all rooms.
     if (buttonId === this.#streamDeck.buttonNameToId('fullscreen-on')) {
@@ -323,17 +285,6 @@ class MeetWrapper { // eslint-disable-line
       return;
     }
     this.#streamDeck.clearAllButtons();
-  }
-
-  /**
-   * Draw buttons for Hue
-   */
-  #drawHueButtons() {
-    if (!this.#hueLights) {
-      return;
-    }
-    this.#drawButton(`light-on`);
-    this.#drawButton(`light-off`);
   }
 
   /**

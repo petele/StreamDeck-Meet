@@ -78,24 +78,6 @@ While in the meeting, there are sevent buttons enabled:
 * Rejoin meeting.
 * Return to home screen.
 
-## Support for Hue Lights
-
-The extension can turn a Hue light on and off at the beginning/end of each
-meeting. I haven't written any UI/UX for this yet, so you'll need to configure
-it using the console for now.
-
-To setup a Hue light, update the following code with your info, and paste
-it into the console.
-
-```js
-localStorage['msdHue'] = JSON.stringify({
-  address: "IP address of your hub",
-  apiKey: "API key to access the hub",
-  lightId: "1",
-  autoOn: true
-});
-```
-
 ## Trying it yourself
 
 To try the extension yourself, you'll need a StreamDeck device, then follow
