@@ -118,6 +118,9 @@ class StreamDeck { // eslint-disable-line
       case StreamDeckXL.PRODUCT_ID:
         this.#deviceType = new StreamDeckXL();
         break;
+      case StreamDeckPlus.PRODUCT_ID:
+        this.#deviceType = new StreamDeckPlus();
+        break;
       default:
         console.warn('*SD-Meet*', 'Product ID', this.#device.productId, 'is not tested'); // eslint-disable-line
         this.#deviceType = new StreamDeckV2();
@@ -132,6 +135,7 @@ class StreamDeck { // eslint-disable-line
       await this.#device.open();
     } catch (ex) {
       console.error('*SD-Meet*', 'Error opening HID device', ex);
+      alert('If you have the Elgato Stream Deck software open and connected you will need to close it before connecting to the device with the StreemDeck-Meet extension.');
       throw ex;
     }
 
@@ -141,7 +145,7 @@ class StreamDeck { // eslint-disable-line
     // Add event listener for key presses.
     this.#device.addEventListener('inputreport', (event) => {
       if (event.reportId === 0x01) {
-        this.#onButtonPushed(event.data.buffer);
+        this.#onStreamDeckInput(event.data.buffer);
       }
     });
 
@@ -188,6 +192,7 @@ class StreamDeck { // eslint-disable-line
         {vendorId: 0x0fd9, productId: StreamDeckXL.PRODUCT_ID}, // XL
         {vendorId: 0x0fd9, productId: StreamDeckV2.PRODUCT_ID}, // V2
         {vendorId: 0x0fd9, productId: 0x0080}, // MK.2
+        {vendorId: 0x0fd9, productId: StreamDeckPlus.PRODUCT_ID}, // Plus
       ]};
       const devices = await navigator.hid.requestDevice(opts);
       return devices[0];
@@ -208,7 +213,8 @@ class StreamDeck { // eslint-disable-line
             device.productId === StreamDeckMini.PRODUCT_ID ||
             device.productId === StreamDeckXL.PRODUCT_ID ||
             device.productId === StreamDeckV2.PRODUCT_ID ||
-            device.productId === 0x0080) {
+            device.productId === 0x0080 ||
+            device.productId === StreamDeckPlus.PRODUCT_ID) {
           return device;
         }
       }
@@ -224,26 +230,39 @@ class StreamDeck { // eslint-disable-line
    *
    * @param {ArrayBuffer} buffer
    */
-  #onButtonPushed(buffer) {
-    const keys = new Int8Array(buffer);
-    const start = this.#deviceType.OFFSET - 1;
-    const end = this.#deviceType.NUM_KEYS + this.#deviceType.OFFSET - 1;
-    const data = Array.from(keys).slice(start, end);
-    data.forEach((item, keyIndex) => {
-      const keyPressed = data[keyIndex] === 1;
-      const stateChanged = keyPressed !== this.#keyState[keyIndex];
-      if (!stateChanged) {
-        return;
-      }
-      this.#keyState[keyIndex] = keyPressed;
-      const details = {
-        buttonId: keyIndex + this.#deviceType.ID_OFFSET,
-        pushed: keyPressed,
-        buttonStates: this.#keyState.slice(),
-      };
-      const evtType = keyPressed ? 'keydown' : 'keyup';
-      this.#dispatchCustomEvent(evtType, details);
-    });
+  #onStreamDeckInput(buffer) {
+    const keys = new Uint8Array(buffer);
+    const inputType = keys[0]
+		switch (inputType) {
+			case 0x00: // Button
+        const start = this.#deviceType.OFFSET - 1;
+        const end = this.#deviceType.NUM_KEYS + this.#deviceType.OFFSET - 1;
+        const data = Array.from(keys).slice(start, end);
+        data.forEach((item, keyIndex) => {
+          const keyPressed = data[keyIndex] === 1;
+          const stateChanged = keyPressed !== this.#keyState[keyIndex];
+          if (!stateChanged) {
+            return;
+          }
+          this.#keyState[keyIndex] = keyPressed;
+          const details = {
+            buttonId: keyIndex + this.#deviceType.ID_OFFSET,
+            pushed: keyPressed,
+            buttonStates: this.#keyState.slice(),
+          };
+          const evtType = keyPressed ? 'keydown' : 'keyup';
+          this.#dispatchCustomEvent(evtType, details);
+        });
+				break
+			case 0x02: // LCD
+				console.warn('LCD input not implemented yet.', keys);
+        this.#deviceType?.handleLcdInput?.(keys);
+				break
+			case 0x03: // Encoder/Dial
+				console.warn('Dial input not implemented yet.', keys);
+        this.#deviceType?.handleEncoderInput?.(keys);
+				break
+		}
   }
 
   /**
