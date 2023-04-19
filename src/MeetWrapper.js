@@ -719,7 +719,7 @@ class MeetWrapper { // eslint-disable-line
    * @return {?Element}
    */
   #getMicButton() {
-    const sel = '[jscontroller=t8kvj]';
+    const sel = '[jscontroller=t2mBxb]';
     return document.querySelector(sel)?.querySelector('button');
   }
 
@@ -729,7 +729,7 @@ class MeetWrapper { // eslint-disable-line
    * @return {?Element}
    */
   #getCamButton() {
-    const sel = '[jscontroller=DXtw0b]';
+    const sel = '[jscontroller=vuC9df]';
     return document.querySelector(sel)?.querySelector('button');
   }
 
