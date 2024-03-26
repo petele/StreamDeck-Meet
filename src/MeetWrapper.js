@@ -719,7 +719,7 @@ class MeetWrapper { // eslint-disable-line
    * @return {?Element}
    */
   #getMicButton() {
-    const sel = '[jscontroller=t2mBxb]';
+    const sel = '[jsname=Dg9Wp]';
     return document.querySelector(sel)?.querySelector('button');
   }
 
@@ -729,7 +729,7 @@ class MeetWrapper { // eslint-disable-line
    * @return {?Element}
    */
   #getCamButton() {
-    const sel = '[jscontroller=vuC9df]';
+    const sel = '[jsname=R3GXJb]';
     return document.querySelector(sel)?.querySelector('button');
   }
 
@@ -850,7 +850,7 @@ class MeetWrapper { // eslint-disable-line
    * @return {?Element}
    */
   #getGreenRoomMicButton() {
-    const sel = '[jscontroller=t8kvj]';
+    const sel = '[jsname=Dg9Wp]';
     return document.querySelector(sel)?.querySelector('[role=button]');
   }
 
@@ -860,7 +860,7 @@ class MeetWrapper { // eslint-disable-line
    * @return {?Element}
    */
   #getGreenRoomCamButton() {
-    const sel = '[jscontroller=DXtw0b]';
+    const sel = '[jsname=R3GXJb]';
     return document.querySelector(sel)?.querySelector('[role=button]');
   }
 
