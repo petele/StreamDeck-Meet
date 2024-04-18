@@ -720,7 +720,7 @@ class MeetWrapper { // eslint-disable-line
    */
   #getMicButton() {
     const sel = '[jscontroller=t2mBxb]';
-    return document.querySelector(sel)?.querySelector('button[jscontroller=soHxf]');
+    return document.querySelector(sel)?.querySelector('button[data-is-muted]');
   }
 
   /**
@@ -730,7 +730,7 @@ class MeetWrapper { // eslint-disable-line
    */
   #getCamButton() {
     const sel = '[jscontroller=bwqwSd]';
-    return document.querySelector(sel)?.querySelector('button[jscontroller=soHxf]');
+    return document.querySelector(sel)?.querySelector('button[data-is-muted]');
   }
 
   /**
