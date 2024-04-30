@@ -118,6 +118,9 @@ class StreamDeck { // eslint-disable-line
       case StreamDeckXL.PRODUCT_ID:
         this.#deviceType = new StreamDeckXL();
         break;
+      case MacropadGB4.PRODUCT_ID:
+        this.#deviceType = new MacropadGB4();
+        break;
       default:
         console.warn('*SD-Meet*', 'Product ID', this.#device.productId, 'is not tested'); // eslint-disable-line
         this.#deviceType = new StreamDeckV2();
@@ -140,8 +143,10 @@ class StreamDeck { // eslint-disable-line
 
     // Add event listener for key presses.
     this.#device.addEventListener('inputreport', (event) => {
-      if (event.reportId === 0x01) {
+      if (event.device.vendorId === 0x0fd9 && event.reportId === 0x01) {
         this.#onButtonPushed(event.data.buffer);
+      } else if (event.device.vendorId === 0x5049 && event.reportId === 0x04) {
+        this.#onMacropadKeyPushed(event);
       }
     });
 
@@ -188,6 +193,8 @@ class StreamDeck { // eslint-disable-line
         {vendorId: 0x0fd9, productId: StreamDeckXL.PRODUCT_ID}, // XL
         {vendorId: 0x0fd9, productId: StreamDeckV2.PRODUCT_ID}, // V2
         {vendorId: 0x0fd9, productId: 0x0080}, // MK.2
+        {vendorId: 0x5049, productId: 0x001B,
+          usagePage: 0x000c, usage: 0x0001}, // Macropad GB4
       ]};
       const devices = await navigator.hid.requestDevice(opts);
       return devices[0];
@@ -211,6 +218,11 @@ class StreamDeck { // eslint-disable-line
             device.productId === 0x0080) {
           return device;
         }
+      } else if (
+        device.vendorId === 0x5049 && device.productId === 0x001B &&
+        device.collections.some((coll) => coll.usagePage === 0x000c)
+      ) {
+        return device;
       }
     }
     return null;
@@ -230,7 +242,7 @@ class StreamDeck { // eslint-disable-line
     const end = this.#deviceType.NUM_KEYS + this.#deviceType.OFFSET - 1;
     const data = Array.from(keys).slice(start, end);
     data.forEach((item, keyIndex) => {
-      const keyPressed = data[keyIndex] === 1;
+      const keyPressed = item === 1;
       const stateChanged = keyPressed !== this.#keyState[keyIndex];
       if (!stateChanged) {
         return;
@@ -244,6 +256,33 @@ class StreamDeck { // eslint-disable-line
       const evtType = keyPressed ? 'keydown' : 'keyup';
       this.#dispatchCustomEvent(evtType, details);
     });
+  }
+
+  /**
+   * Called when a button on the macropad is pushed/released.
+   *
+   * @fires StreamDeck#keydown
+   * @fires StreamDeck#keyup
+   *
+   * @param {HIDInputReportEvent} event
+   */
+  #onMacropadKeyPushed(event) {
+    const value = event.data.getUint8(0);
+    const keyPressed = value !== 0;
+    if (!keyPressed) {
+      this.#keyState.fill(false);
+    }
+    const keyIndex = this.#deviceType.keyValueToIdMap[value];
+    if (keyIndex !== undefined) {
+      this.#keyState[keyIndex] = keyPressed;
+    }
+    const details = {
+      buttonId: keyIndex,
+      pushed: keyPressed,
+      buttonStates: this.#keyState.slice(),
+    };
+    const evtType = keyPressed ? 'keydown' : 'keyup';
+    this.#dispatchCustomEvent(evtType, details);
   }
 
   /**
