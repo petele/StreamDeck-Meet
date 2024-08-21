@@ -719,7 +719,7 @@ class MeetWrapper { // eslint-disable-line
    * @return {?Element}
    */
   #getMicButton() {
-    const sel = '[jscontroller=t2mBxb]';
+    const sel = '[jscontroller=eB6kvd]';
     return document.querySelector(sel)?.querySelector('button[data-is-muted]');
   }
 
