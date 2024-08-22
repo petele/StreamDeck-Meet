@@ -62,7 +62,7 @@ class MeetWrapper { // eslint-disable-line
     }
 
     const bodyObserver = new MutationObserver(() => {
-      if (document.querySelector('div[data-second-screen]')) {
+      if (document.querySelector('div[data-meeting-title]')) {
         this.#enterMeeting();
       } else if (document.querySelector('[jscontroller=dyDNGc]')) {
         this.#enterGreenRoom();
@@ -719,7 +719,7 @@ class MeetWrapper { // eslint-disable-line
    * @return {?Element}
    */
   #getMicButton() {
-    const sel = '[jscontroller=t2mBxb]';
+    const sel = '[jscontroller=eB6kvd]';
     return document.querySelector(sel)?.querySelector('button[data-is-muted]');
   }
 
