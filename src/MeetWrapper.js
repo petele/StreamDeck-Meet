@@ -697,12 +697,12 @@ class MeetWrapper { // eslint-disable-line
    *
    * @return {?Element}
    */
-    #getMeetingInfoDialogCloseButton() {
-      const dialog = document.querySelector('[jscontroller=Cmkwqf]');
-      if (dialog) {
-        return dialog.querySelector('[aria-label=Close]');
-      }
+  #getMeetingInfoDialogCloseButton() {
+    const dialog = document.querySelector('[jscontroller=Cmkwqf]');
+    if (dialog) {
+      return dialog.querySelector('[aria-label=Close]');
     }
+  }
 
   /**
    * Get the presentation bar container (meeting).
