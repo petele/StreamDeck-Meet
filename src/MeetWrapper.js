@@ -21,6 +21,7 @@
 class MeetWrapper { // eslint-disable-line
   #currentRoom;
   #hasBeenActivated = false;
+  #inEmojiMode = false;
 
   #ROOM_NAMES = {
     lobby: 'lobby',
@@ -128,6 +129,9 @@ class MeetWrapper { // eslint-disable-line
       return;
     }
     this.#currentRoom = this.#ROOM_NAMES.meeting;
+    // Only reset emoji mode if we are legitimately entering;
+    // though the guard above handles most cases.
+    this.#inEmojiMode = false;
     console.log('*SD-Meet*', 'Room:', this.#currentRoom);
 
     this.#resetButtons();
@@ -138,16 +142,7 @@ class MeetWrapper { // eslint-disable-line
     // screen. I should probably use a mutation observer to see when they
     // drawn, then render them, but I'm feeling kinda lazy today.
     setTimeout(() => {
-      this.#setupMicButton();
-      this.#setupCamButton();
-      this.#setupCCButton();
-      this.#setupHandButton();
-      this.#setupInfoButton();
-      this.#setupPeopleButton();
-      this.#setupChatButton();
-      this.#setupActivitiesButton();
-      this.#setupPresentingButton();
-      this.#setupReactionButton();
+      this.#drawMeetingButtons();
     }, 500);
 
     // If it was an instant meeting, automatically close
@@ -155,6 +150,23 @@ class MeetWrapper { // eslint-disable-line
     setTimeout(() => {
       this.#tapCloseInfoDialog();
     }, 10 * 1000);
+  }
+
+  /**
+   * Draw standard meeting buttons.
+   */
+  #drawMeetingButtons() {
+    if (this.#inEmojiMode) return;
+    this.#setupMicButton();
+    this.#setupCamButton();
+    this.#setupCCButton();
+    this.#setupHandButton();
+    this.#setupInfoButton();
+    this.#setupPeopleButton();
+    this.#setupChatButton();
+    this.#setupActivitiesButton();
+    this.#setupPresentingButton();
+    this.#setupReactionButton();
   }
 
   /**
@@ -221,8 +233,26 @@ class MeetWrapper { // eslint-disable-line
 
     // Available while in the meeting room.
     if (this.#currentRoom === this.#ROOM_NAMES.meeting) {
+      if (this.#inEmojiMode) {
+        if (buttonId === this.#streamDeck.buttonNameToId('reaction')) {
+          this.#exitEmojiMode();
+          // Toggle the panel closed as well
+          this.#tapReactions();
+        } else {
+          // It's an emoji click
+          this.#handleEmojiPress(buttonId);
+        }
+        return;
+      }
+
       if (buttonId === this.#streamDeck.buttonNameToId('reaction')) {
         this.#tapReactions();
+        this.#inEmojiMode = true;
+        // Wait for panel to open and draw (with retry)
+        this.#drawEmojiButtons();
+
+        // Start watching for panel closure
+        this.#watchEmojiPanel();
       } else if (buttonId === this.#streamDeck.buttonNameToId('info')) {
         this.#tapInfo();
       } else if (buttonId === this.#streamDeck.buttonNameToId('users')) {
@@ -460,6 +490,198 @@ class MeetWrapper { // eslint-disable-line
   }
 
   /**
+   * Draw emoji buttons.
+   * @param {number} [attempt=0] Retry attempt counter
+   */
+  async #drawEmojiButtons(attempt = 0) {
+    // If we left emoji mode, stop trying
+    if (!this.#inEmojiMode) return;
+
+    const emojis = this.#getAvailableEmojis();
+
+    // If not found and we haven't tried enough, retry
+    if (emojis.length === 0 && attempt < 10) {
+      setTimeout(() => this.#drawEmojiButtons(attempt + 1), 200);
+      return;
+    }
+
+    this.#resetButtons();
+    // Keep the reaction button as "Back/Toggle" and showing "Open" state
+    this.#drawButton('reaction-open');
+
+    const reactionId = this.#streamDeck.buttonNameToId('reaction');
+
+    // We want to fill other buttons with emojis
+    let emojiIndex = 0;
+    // Arbitrary limit 32 for StreamDeck XL
+    for (let i = 0; i < 32; i++) {
+      if (i === reactionId) continue;
+      if (emojiIndex >= emojis.length) break;
+
+      await this.#drawEmoji(i, emojis[emojiIndex].char);
+      emojiIndex++;
+    }
+  }
+
+  /**
+   * Exit emoji mode and restore standard buttons
+   */
+  #exitEmojiMode() {
+    this.#inEmojiMode = false;
+    this.#resetButtons();
+    this.#drawFullScreenButton();
+    this.#drawButton('end-call');
+    this.#drawMeetingButtons();
+    // Stop watching logic is implicit as the loop in #watchEmojiPanel checks
+    // flag
+  }
+
+  /**
+   * Watch for emoji panel closing externally
+   */
+  async #watchEmojiPanel() {
+    if (!this.#inEmojiMode) return;
+
+    // Start watcher
+    const bar = this.#getReactionBar();
+    if (!bar) {
+      // Just waiting...
+    }
+    // If panel is gone, exit logic
+    // We give it a grace period if we just started (handled by valid bar check
+    // mostly)
+    // But if bar is null, maybe we are just waiting for it to open?
+    // #drawEmojiButtons has strict retry logic.
+    // Here we just want to catch "open -> closed" transition.
+    // Simple poll:
+
+    const checkInterval = setInterval(() => {
+      if (!this.#inEmojiMode) {
+        clearInterval(checkInterval);
+        return;
+      }
+
+      // Check if reactions are still viable.
+      // If the user closed the panel, #getReactionBar might return null
+      // or hidden.
+      // The "Send a reaction" toolbar usually stays in DOM but might
+      // become hidden?
+      // Per user DOM: `class="oj6G3d P9KVBf FVKzAb"`
+      // `style="bottom: 80px; left: 0px;"`
+      // If it closes, does it disappear? Usually yes for "popups" in Meet.
+
+      const checkBar = this.#getReactionBar();
+      if (!checkBar || checkBar.offsetParent === null) {
+        this.#exitEmojiMode();
+        clearInterval(checkInterval);
+      }
+    }, 1000);
+  }
+
+  /**
+   * Draw a single emoji on a button.
+   * @param {number} buttonId
+   * @param {string} char
+   */
+  async #drawEmoji(buttonId, char) {
+    if (!this.#streamDeck?.isConnected) return;
+
+    const size = 72;
+    const canvas = new OffscreenCanvas(size, size);
+    const ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, size, size);
+
+    // Draw directly without rotation.
+    // Since we cannot access private #deviceType in StreamDeck.js, we cannot
+    // read configuration. However, the user reported 180 rotation (my previous
+    // fallback) result was upside down. So 0 rotation (default) should be
+    // correct.
+
+    // Apply transformations based on device type
+    ctx.translate(size / 2, size / 2);
+    if (this.#streamDeck.horizontalFlip) {
+      ctx.scale(-1, 1);
+    }
+    const rotation = this.#streamDeck.imageRotation || 0;
+    ctx.rotate(rotation * Math.PI / 180);
+    ctx.translate(-size / 2, -size / 2);
+
+    ctx.font = '40px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(char, size / 2, size / 2 + 5);
+
+    // Reset transform just in case (though ctx is fresh)
+    // No need as we are done drawing.
+
+    await this.#streamDeck.fillCanvas(buttonId, canvas);
+  }
+
+  /**
+   * Handle press on a key when in emoji mode
+   * @param {number} buttonId
+   */
+  #handleEmojiPress(buttonId) {
+    const reactionId = this.#streamDeck.buttonNameToId('reaction');
+    const emojis = this.#getAvailableEmojis();
+
+    // Reconstruct the mapping logic to find index
+    let emojiIndex = 0;
+    let found = false;
+    for (let i = 0; i < 32; i++) {
+      if (i === reactionId) continue;
+      if (i === buttonId) {
+        found = true;
+        break;
+      }
+      emojiIndex++;
+    }
+
+    if (found && emojiIndex < emojis.length) {
+      const emoji = emojis[emojiIndex];
+      this.#tapReactionEmoji(emoji.label);
+    }
+  }
+
+  /**
+   * Get available emojis from the DOM.
+   * @return {Array<{label: string, char: string}>}
+   */
+  #getAvailableEmojis() {
+    const bar = this.#getReactionBar();
+    if (!bar) return [];
+
+    const buttons = bar.querySelectorAll('button');
+    const emojis = [];
+
+    buttons.forEach((btn) => {
+      const label = btn.getAttribute('aria-label');
+      // Prefer data-emoji attribute as innerText might be empty for images
+      const char = btn.getAttribute('data-emoji') ||
+        btn.innerText ||
+        btn.textContent ||
+        label;
+
+      if (label && char) {
+        // filter out "More emojis" or other non-emoji buttons if they sneak in
+        // A simple check is if char is short (1-2 chars usually)
+        // or if it matches the label.
+
+        // Use data-emoji if available, it's the most reliable source.
+        if (btn.hasAttribute('data-emoji')) {
+          emojis.push({ label, char: btn.getAttribute('data-emoji') });
+        } else if (char.trim()) {
+          emojis.push({ label, char: char.trim() });
+        }
+      }
+    });
+    return emojis;
+  }
+
+  /**
    * Setup the green room mic button.
    */
   #setupGreenRoomMicButton() {
@@ -501,6 +723,7 @@ class MeetWrapper { // eslint-disable-line
    * Update the StreamDeck mic button to indicate current state.
    */
   #updateMicButton() {
+    if (this.#inEmojiMode) return;
     const button = this.#getMicButton();
     if (!button) {
       return;
@@ -514,6 +737,7 @@ class MeetWrapper { // eslint-disable-line
    * Update the StreamDeck camera button to indicate current state.
    */
   #updateCamButton() {
+    if (this.#inEmojiMode) return;
     const button = this.#getCamButton();
     if (!button) {
       return;
@@ -527,6 +751,7 @@ class MeetWrapper { // eslint-disable-line
    * Update the StreamDeck CC button to indicate current state.
    */
   #updateCCButton() {
+    if (this.#inEmojiMode) return;
     const button = this.#getCCButton();
     if (!button) {
       return;
@@ -540,6 +765,7 @@ class MeetWrapper { // eslint-disable-line
    * Update the StreamDeck hand button to indicate current state.
    */
   #updateHandButton() {
+    if (this.#inEmojiMode) return;
     const button = this.#getHandButton();
     if (!button) {
       return;
@@ -553,6 +779,7 @@ class MeetWrapper { // eslint-disable-line
    * Update the StreamDeck info button to indicate current state.
    */
   #updateInfoButton() {
+    if (this.#inEmojiMode) return;
     const button = this.#getInfoButton();
     if (!button) {
       return;
@@ -566,6 +793,7 @@ class MeetWrapper { // eslint-disable-line
    * Update the StreamDeck people button to indicate current state.
    */
   #updatePeopleButton() {
+    if (this.#inEmojiMode) return;
     const button = this.#getPeopleButton();
     if (!button) {
       return;
@@ -579,6 +807,7 @@ class MeetWrapper { // eslint-disable-line
    * Update the StreamDeck chat button to indicate current state.
    */
   #updateChatButton() {
+    if (this.#inEmojiMode) return;
     const button = this.#getChatButton();
     if (!button) {
       return;
@@ -592,6 +821,7 @@ class MeetWrapper { // eslint-disable-line
    * Update the StreamDeck activities button to indicate current state.
    */
   #updateActivitiesButton() {
+    if (this.#inEmojiMode) return;
     const button = this.#getActivitiesButton();
     if (!button) {
       return;
@@ -605,6 +835,7 @@ class MeetWrapper { // eslint-disable-line
    * Update the StreamDeck stop presenting button to indicate current state.
    */
   #updatePresentingButton() {
+    if (this.#inEmojiMode) return;
     const button = this.#getStopPresentingButton();
     const img = button ? 'present-stop' : 'blank';
     this.#drawButton(img);
@@ -616,8 +847,13 @@ class MeetWrapper { // eslint-disable-line
   #updateReactionButton() {
     const button = this.#getReactionButton();
     if (!button) {
+      // If we can't find the button, we might be in a state where it's hidden
+      // or we shouldn't update.
       return;
     }
+    // If in emoji mode, we handle buttons manually
+    if (this.#inEmojiMode) return;
+
     const newVal = button.getAttribute('aria-pressed') == 'true';
     const img = newVal ? 'reaction-open' : 'reaction';
     this.#drawButton(img);
@@ -809,8 +1045,18 @@ class MeetWrapper { // eslint-disable-line
    * @return {?Element}
    */
   #getReactionButton() {
+    // Try specific controller first
     const sel = '[jscontroller=M3NJxf]';
-    return document.querySelector(sel)?.querySelector('button');
+    let btn = document.querySelector(sel)?.querySelector('button');
+    if (btn) return btn;
+
+    // Fallback: Try aria-label (English)
+    btn = document.querySelector('button[aria-label="Send a reaction"]');
+    if (btn) return btn;
+
+    // Fallback: Try aria-label (French - guessed)
+    btn = document.querySelector('button[aria-label="Envoyer une réaction"]');
+    return btn;
   }
 
   /**
@@ -819,8 +1065,34 @@ class MeetWrapper { // eslint-disable-line
    * @return {?Element}
    */
   #getReactionBar() {
+    // Try specific controller first
     const sel = '[jscontroller=tdX73b]';
-    return document.querySelector(sel);
+    let bar = document.querySelector(sel);
+    if (bar) return bar;
+
+    // Fallback: Try finding via aria-controls of the button
+    const btn = this.#getReactionButton();
+    if (btn) {
+      const controlsId = btn.getAttribute('aria-controls');
+      if (controlsId) {
+        bar = document.getElementById(controlsId);
+        if (bar) return bar;
+      }
+    }
+
+    // Fallback: Look for a container that has reaction buttons
+    // Look for a known emoji like '💖' or 'Sparkle'
+    const sparkleBtn = document.querySelector('button[aria-label="Sparkle"]');
+    if (sparkleBtn) {
+      return sparkleBtn.closest('[role="dialog"]') || sparkleBtn.closest('div');
+    }
+
+    // Fallback: Explicit toolbar role with aria-label provided by user
+    const toolbar = document.querySelector(
+      '[role="toolbar"][aria-label="Send a reaction"]');
+    if (toolbar) return toolbar;
+
+    return null;
   }
 
   /**
@@ -830,8 +1102,17 @@ class MeetWrapper { // eslint-disable-line
    * @return {?Element}
    */
   #getReactionEmojiButton(emoji) {
-    const sel = `[aria-label=${emoji}]`;
+    const sel = `[aria-label="${emoji.replace(/"/g, '\\"')}"]`;
     return document.querySelector(sel);
+  }
+
+  /**
+   * Taps a specific reaction emoji
+   * @param {string} emojiLabel
+   */
+  #tapReactionEmoji(emojiLabel) {
+    const button = this.#getReactionEmojiButton(emojiLabel);
+    this.#tapButtonWrapper(button, `emoji-${emojiLabel}`);
   }
 
   /**

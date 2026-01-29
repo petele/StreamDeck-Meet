@@ -280,6 +280,24 @@ class StreamDeck { // eslint-disable-line
   }
 
   /**
+   * Get the image rotation for the connected device.
+   *
+   * @return {number} Rotation in degrees.
+   */
+  get imageRotation() {
+    return this.#deviceType.IMAGE_ROTATION;
+  }
+
+  /**
+   * Get the horizontal flip setting for the connected device.
+   *
+   * @return {number} 1 if flipped, 0 otherwise.
+   */
+  get horizontalFlip() {
+    return this.#deviceType.HRZFLIP;
+  }
+
+  /**
    * Get the firmware revision of the connected StreamDeck.
    *
    * @return {?Promise<string>} Firmware version.
@@ -490,16 +508,19 @@ class StreamDeck { // eslint-disable-line
       return;
     }
     this.#isQueueRunning = true;
-    let queued = this.#commandQueue.shift();
-    while (queued) {
-      for (const packet of queued) {
-        const reportId = packet[0];
-        const data = new Uint8Array(packet.slice(1));
-        await this.#device.sendReport(reportId, data);
+    try {
+      let queued = this.#commandQueue.shift();
+      while (queued) {
+        for (const packet of queued) {
+          const reportId = packet[0];
+          const data = new Uint8Array(packet.slice(1));
+          await this.#device.sendReport(reportId, data);
+        }
+        queued = this.#commandQueue.shift();
       }
-      queued = this.#commandQueue.shift();
+    } finally {
+      this.#isQueueRunning = false;
     }
-    this.#isQueueRunning = false;
   }
 
   /**
