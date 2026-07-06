@@ -5,7 +5,8 @@
   "author": "",
   "license": "Apache-2.0",
   "scripts": {
-    "lint": "eslint src"
+    "lint": "eslint src",
+    "test": "jest"
   },
   "devDependencies": {
     "@babel/core": "^7.12.10",
@@ -14,6 +15,8 @@
     "@babel/plugin-proposal-private-methods": "^7.12.1",
     "@babel/preset-env": "^7.12.10",
     "eslint": "^7.15.0",
-    "eslint-config-google": "^0.14.0"
+    "eslint-config-google": "^0.14.0",
+    "jest": "^30.4.2",
+    "jest-environment-jsdom": "^30.4.1"
   }
 }

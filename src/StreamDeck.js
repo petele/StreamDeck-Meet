@@ -33,6 +33,7 @@ class StreamDeck { // eslint-disable-line
   #isQueueRunning = false;
 
   #imageCache = {};
+  #buttonImageRequests = {};
 
   /**
    * Constructor
@@ -47,6 +48,9 @@ class StreamDeck { // eslint-disable-line
 
     // Handle behaviour when the device is connected, or re-connected.
     navigator.hid.addEventListener('connect', async (event) => {
+      if (!this.#isSupportedDevice(event.device)) {
+        return;
+      }
       const connected = await this.connect();
       if (connected) {
         this.#dispatchEvent(event);
@@ -123,6 +127,43 @@ class StreamDeck { // eslint-disable-line
         this.#deviceType = new StreamDeckV2();
         break;
     }
+
+    // Load custom mappings from chrome.storage if available
+    let storageKey = '';
+    switch (this.#device.productId) {
+      case StreamDeckMini.PRODUCT_ID:
+        storageKey = 'mappings_mini';
+        break;
+      case StreamDeckV1.PRODUCT_ID:
+        storageKey = 'mappings_v1';
+        break;
+      case StreamDeckV2.PRODUCT_ID:
+      case 0x0080: // MK.2
+        storageKey = 'mappings_v2';
+        break;
+      case StreamDeckXL.PRODUCT_ID:
+        storageKey = 'mappings_xl';
+        break;
+    }
+    if (storageKey && typeof chrome !== 'undefined' &&
+        chrome.storage && chrome.storage.local) {
+      try {
+        const result = await chrome.storage.local.get(storageKey);
+        if (result[storageKey]) {
+          this.#deviceType.buttonNameToIdMap = {
+            ...this.#deviceType.buttonNameToIdMap,
+            ...result[storageKey],
+          };
+        }
+      } catch (e) {
+        console.error(
+            '*SD-Meet*',
+            'Error loading custom mappings from storage:',
+            e,
+        );
+      }
+    }
+
     if (this.#device.opened) {
       return true;
     }
@@ -280,6 +321,24 @@ class StreamDeck { // eslint-disable-line
   }
 
   /**
+   * Get the image rotation for the connected device.
+   *
+   * @return {number} Rotation in degrees.
+   */
+  get imageRotation() {
+    return this.#deviceType.IMAGE_ROTATION;
+  }
+
+  /**
+   * Get the horizontal flip setting for the connected device.
+   *
+   * @return {number} 1 if flipped, 0 otherwise.
+   */
+  get horizontalFlip() {
+    return this.#deviceType.HRZFLIP;
+  }
+
+  /**
    * Get the firmware revision of the connected StreamDeck.
    *
    * @return {?Promise<string>} Firmware version.
@@ -339,10 +398,14 @@ class StreamDeck { // eslint-disable-line
    */
   async fillURL(buttonId, url, cache) {
     this.#readyOrThrow();
+    this.#buttonImageRequests[buttonId] = url;
     if (cache && this.#imageCache[url]) {
       return this.#sendBuffer(buttonId, this.#imageCache[url]);
     }
     const buffer = await this.#getImageBufferFromURL(url);
+    if (this.#buttonImageRequests[buttonId] !== url) {
+      return;
+    }
     const result = this.#sendBuffer(buttonId, buffer);
     if (cache) {
       this.#imageCache[url] = buffer;
@@ -359,6 +422,7 @@ class StreamDeck { // eslint-disable-line
    */
   async fillColor(buttonId, color, cache) {
     this.#readyOrThrow();
+    this.#buttonImageRequests[buttonId] = color;
     if (cache && this.#imageCache[color]) {
       return this.#sendBuffer(buttonId, this.#imageCache[color]);
     }
@@ -368,6 +432,9 @@ class StreamDeck { // eslint-disable-line
     ctx.fillStyle = color;
     ctx.fillRect(0, 0, this.#deviceType.ICON_SIZE, this.#deviceType.ICON_SIZE);
     const buffer = await this.#getImageBufferFromCanvas(canvas);
+    if (this.#buttonImageRequests[buttonId] !== color) {
+      return;
+    }
     const result = this.#sendBuffer(buttonId, buffer);
     if (cache) {
       this.#imageCache[color] = buffer;
@@ -383,7 +450,12 @@ class StreamDeck { // eslint-disable-line
    */
   async fillCanvas(buttonId, canvas) {
     this.#readyOrThrow();
+    const uniqueId = Symbol('canvas');
+    this.#buttonImageRequests[buttonId] = uniqueId;
     const buffer = await this.#getImageBufferFromCanvas(canvas);
+    if (this.#buttonImageRequests[buttonId] !== uniqueId) {
+      return;
+    }
     return this.#sendBuffer(buttonId, buffer);
   }
 
@@ -395,6 +467,7 @@ class StreamDeck { // eslint-disable-line
    */
   async fillBuffer(buttonId, buffer) {
     this.#readyOrThrow();
+    this.#buttonImageRequests[buttonId] = Symbol('buffer');
     return this.#sendBuffer(buttonId, buffer);
   }
 
@@ -490,16 +563,19 @@ class StreamDeck { // eslint-disable-line
       return;
     }
     this.#isQueueRunning = true;
-    let queued = this.#commandQueue.shift();
-    while (queued) {
-      for (const packet of queued) {
-        const reportId = packet[0];
-        const data = new Uint8Array(packet.slice(1));
-        await this.#device.sendReport(reportId, data);
+    try {
+      let queued = this.#commandQueue.shift();
+      while (queued) {
+        for (const packet of queued) {
+          const reportId = packet[0];
+          const data = new Uint8Array(packet.slice(1));
+          await this.#device.sendReport(reportId, data);
+        }
+        queued = this.#commandQueue.shift();
       }
-      queued = this.#commandQueue.shift();
+    } finally {
+      this.#isQueueRunning = false;
     }
-    this.#isQueueRunning = false;
   }
 
   /**
@@ -569,11 +645,28 @@ class StreamDeck { // eslint-disable-line
    *
    * @param {Event} event The event to dispatch
    */
-   #dispatchEvent(event) {
-     this.#handlers.forEach((handler) => {
-       if (event.type === handler.type && handler.fn) {
-         handler.fn(event);
-       }
-     });
-   }
+  #dispatchEvent(event) {
+    this.#handlers.forEach((handler) => {
+      if (event.type === handler.type && handler.fn) {
+        handler.fn(event);
+      }
+    });
+  }
+
+  /**
+   * Checks if the HID device is a supported StreamDeck.
+   *
+   * @param {HIDDevice} device HID device to check
+   * @return {boolean} True if the device is a supported StreamDeck
+   */
+  #isSupportedDevice(device) {
+    if (device.vendorId !== 0x0fd9) {
+      return false;
+    }
+    return device.productId === StreamDeckV1.PRODUCT_ID ||
+           device.productId === StreamDeckMini.PRODUCT_ID ||
+           device.productId === StreamDeckXL.PRODUCT_ID ||
+           device.productId === StreamDeckV2.PRODUCT_ID ||
+           device.productId === 0x0080;
+  }
 }

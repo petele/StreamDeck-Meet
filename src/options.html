@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>StreamDeck for Google Meet Options</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin: 20px;
+      background-color: #f5f5f7;
+      color: #1d1d1f;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      gap: 30px;
+    }
+    .settings-panel {
+      flex: 1;
+      background: white;
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    .preview-panel {
+      flex: 1;
+      background: white;
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    h1, h2 {
+      margin-top: 0;
+    }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 500;
+    }
+    select {
+      width: 100%;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid #d2d2d7;
+      font-size: 14px;
+      background-color: #fff;
+    }
+    .action-group-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-top: 24px;
+      margin-bottom: 12px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #e5e5ea;
+      color: #86868b;
+    }
+    .button-row {
+      margin-top: 24px;
+      display: flex;
+      gap: 12px;
+    }
+    button {
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: none;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .btn-primary {
+      background-color: #0071e3;
+      color: white;
+    }
+    .btn-primary:hover {
+      background-color: #0077ed;
+    }
+    .btn-secondary {
+      background-color: #e8e8ed;
+      color: #1d1d1f;
+    }
+    .btn-secondary:hover {
+      background-color: #d2d2d7;
+    }
+    
+    .sd-grid {
+      display: grid;
+      gap: 10px;
+      background: #1c1c1e;
+      padding: 15px;
+      border-radius: 16px;
+      margin-top: 20px;
+      box-shadow: inset 0 2px 8px rgba(0,0,0,0.5);
+    }
+    
+    .sd-key {
+      background: #2c2c2e;
+      border: 2px solid #3a3a3c;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 12px;
+      position: relative;
+      aspect-ratio: 1;
+      padding: 4px;
+      box-sizing: border-box;
+      text-align: center;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    
+    .sd-key.active {
+      background: #3a3a3c;
+      border-color: #0071e3;
+    }
+    
+    .sd-key-number {
+      font-weight: bold;
+      color: #8e8e93;
+      font-size: 10px;
+      position: absolute;
+      top: 4px;
+      left: 6px;
+    }
+    
+    .sd-key-actions {
+      margin-top: 10px;
+      font-size: 9px;
+      color: #30d158;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      max-height: calc(100% - 15px);
+      overflow-y: auto;
+      width: 100%;
+    }
+    
+    .sd-key-action-tag {
+      background: rgba(48, 209, 88, 0.15);
+      border-radius: 3px;
+      padding: 1px 3px;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+    }
+    
+    #status-toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #323232;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      opacity: 0;
+      transition: opacity 0.3s, transform 0.3s;
+      pointer-events: none;
+      z-index: 9999;
+    }
+    #status-toast.show {
+      opacity: 1;
+      transform: translateX(-50%);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="settings-panel">
+      <h1>StreamDeck Options</h1>
+      <div class="form-group">
+        <label for="device-model">Select Device Model</label>
+        <select id="device-model">
+          <option value="mini">StreamDeck Mini (6 keys)</option>
+          <option value="v1">StreamDeck V1 (15 keys)</option>
+          <option value="v2" selected>StreamDeck V2 (15 keys, 0-indexed)</option>
+          <option value="xl">StreamDeck XL (32 keys)</option>
+        </select>
+      </div>
+
+      <form id="mappings-form">
+        <div id="actions-list"></div>
+        
+        <div class="button-row">
+          <button type="submit" class="btn-primary">Save Mappings</button>
+          <button type="button" id="reset-btn" class="btn-secondary">Reset to Defaults</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="preview-panel">
+      <h2>Device Layout Preview</h2>
+      <p style="color: #86868b; font-size: 13px; text-align: center;">
+          This shows the current layout of physical keys. The labels indicate which actions are mapped to each key on different screens.
+      </p>
+      <div id="sd-preview-grid" class="sd-grid"></div>
+    </div>
+  </div>
+
+  <div id="status-toast">Options saved successfully!</div>
+
+  <script src="options.js"></script>
+</body>
+</html>
