@@ -3,6 +3,10 @@
   "version": "0.89",
   "description": "StreamDeck helper for Google Meet",
   "manifest_version": 3,
+  "permissions": [
+    "storage"
+  ],
+  "options_page": "options.html",
   "content_scripts": [
     {
       "matches": ["https://meet.google.com/*"],
@@ -21,5 +25,6 @@
   "web_accessible_resources": [{
     "resources": ["ico-svg/*"],
     "matches": ["https://meet.google.com/*"]
-  }]
+  }],
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArarSANlQT4m34onpGhcBbVxTySdokulBhxymfA4olIW9pkOVzq/XlsBXvhyZ8BISluMpBS/6AhBz3529gZ5+pUdge/ngjSC2QKfgb4k2rwOcNP/f5GWqMor+spZGG5QGTrjxr9e8NS2y1UbyUbTn536+zgvyb7X+6Fh00m5ArE9ARC6VDd1vIgh1aGHm2CBrBvycHFZzWdVUROKqEHXnex7fDLrQ8c+zizq9HdYDsQ2gwgb8XlpVoExzp202xktAZoHtaFvUjRUMgE3bJjw7Ed7Hox8Vlm34bVwD9HtVLHoZBS86Gf5hEPvNl6n+PG/ZCTMRau8/8o8rVOqa8i2WOQIDAQAB"
 }

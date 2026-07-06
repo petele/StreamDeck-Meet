@@ -22,6 +22,7 @@ class MeetWrapper { // eslint-disable-line
   #currentRoom;
   #hasBeenActivated = false;
   #inEmojiMode = false;
+  #emojiWatchInterval = null;
 
   #ROOM_NAMES = {
     lobby: 'lobby',
@@ -43,6 +44,10 @@ class MeetWrapper { // eslint-disable-line
       this.#handleStreamDeckPress(evt.detail.buttonId);
     });
 
+    this.#streamDeck.addEventListener('connect', () => {
+      this.#redrawCurrentRoom();
+    });
+
     window.addEventListener('fullscreenchange', () => {
       this.#drawFullScreenButton();
     });
@@ -57,21 +62,49 @@ class MeetWrapper { // eslint-disable-line
 
     // Watch for room changes
     const pathname = window.location.pathname;
-    if (pathname === '/' || pathname === '/landing') {
+    if (pathname === '/' || pathname === '/landing' || pathname === '/home') {
       this.#enterLobby();
-      return;
     }
 
-    const bodyObserver = new MutationObserver(() => {
-      if (document.querySelector('div[data-meeting-title]')) {
-        this.#enterMeeting();
-      } else if (document.querySelector('[jscontroller=dyDNGc]')) {
-        this.#enterGreenRoom();
-      } else if (document.querySelector('[jsname=r4nke]')) {
-        this.#enterExitHall();
+    const checkRoom = () => {
+      if (typeof document === 'undefined' || !document || !document.body) {
+        return;
       }
-    });
-    bodyObserver.observe(document.body, {attributes: true, childList: true});
+      try {
+        const hasMeetingTitle = document.querySelector('div[data-meeting-title]');
+        const hasHangup = this.#getHangupButton();
+
+        const hasGreenRoomController = document.querySelector('[jscontroller=dyDNGc]');
+        const hasEnterMeeting = this.#getEnterMeetingButton();
+
+        const hasExitHallController = document.querySelector('[jsname=r4nke]');
+        const hasRejoin = this.#getRejoinButton();
+
+        console.warn('*SD-Meet* checkRoom state:', {
+          hasMeetingTitle: !!hasMeetingTitle,
+          hasHangup: !!hasHangup,
+          hasGreenRoomController: !!hasGreenRoomController,
+          hasEnterMeeting: !!hasEnterMeeting,
+          hasExitHallController: !!hasExitHallController,
+          hasRejoin: !!hasRejoin
+        });
+
+        if (hasMeetingTitle || hasHangup) {
+          this.#enterMeeting();
+        } else if (hasGreenRoomController || hasEnterMeeting) {
+          this.#enterGreenRoom();
+        } else if (hasExitHallController || hasRejoin) {
+          this.#enterExitHall();
+        }
+      } catch (e) {
+        // ignore errors during teardown
+      }
+    };
+
+    checkRoom();
+
+    const bodyObserver = new MutationObserver(checkRoom);
+    bodyObserver.observe(document.body, {childList: true, subtree: true});
   }
 
 
@@ -89,7 +122,9 @@ class MeetWrapper { // eslint-disable-line
       return;
     }
     this.#currentRoom = this.#ROOM_NAMES.lobby;
+    this.#clearEmojiMode();
     console.log('*SD-Meet*', 'Room:', this.#currentRoom);
+
 
     this.#resetButtons();
     this.#drawFullScreenButton();
@@ -105,6 +140,7 @@ class MeetWrapper { // eslint-disable-line
       return;
     }
     this.#currentRoom = this.#ROOM_NAMES.greenRoom;
+    this.#clearEmojiMode();
     console.log('*SD-Meet*', 'Room:', this.#currentRoom);
 
     this.#resetButtons();
@@ -112,13 +148,14 @@ class MeetWrapper { // eslint-disable-line
     this.#drawButton(`enter-meeting`);
     this.#drawButton(`home`);
 
-    // The timeout is there to make sure the elements have drawn on
-    // screen. I should probably use a mutation observer to see when they
-    // drawn, then render them, but I'm feeling kinda lazy today.
-    setTimeout(() => {
-      this.#setupGreenRoomMicButton();
-      this.#setupGreenRoomCamButton();
-    }, 500);
+    this.#retrySetup(
+        this.#ROOM_NAMES.greenRoom,
+        () => this.#getGreenRoomMicButton() && this.#getGreenRoomCamButton(),
+        () => {
+          this.#setupGreenRoomMicButton();
+          this.#setupGreenRoomCamButton();
+        },
+    );
   }
 
   /**
@@ -129,21 +166,22 @@ class MeetWrapper { // eslint-disable-line
       return;
     }
     this.#currentRoom = this.#ROOM_NAMES.meeting;
-    // Only reset emoji mode if we are legitimately entering;
-    // though the guard above handles most cases.
-    this.#inEmojiMode = false;
+    this.#clearEmojiMode();
     console.log('*SD-Meet*', 'Room:', this.#currentRoom);
 
     this.#resetButtons();
     this.#drawFullScreenButton();
     this.#drawButton(`end-call`);
 
-    // The timeout is there to make sure the elements have drawn on
-    // screen. I should probably use a mutation observer to see when they
-    // drawn, then render them, but I'm feeling kinda lazy today.
-    setTimeout(() => {
-      this.#drawMeetingButtons();
-    }, 500);
+    this.#retrySetup(
+        this.#ROOM_NAMES.meeting,
+        () => this.#getMicButton() ||
+              this.#getCamButton() ||
+              this.#getHangupButton(),
+        () => {
+          this.#drawMeetingButtons();
+        },
+    );
 
     // If it was an instant meeting, automatically close
     // the info dialog after 10 seconds.
@@ -177,6 +215,7 @@ class MeetWrapper { // eslint-disable-line
       return;
     }
     this.#currentRoom = this.#ROOM_NAMES.exitHall;
+    this.#clearEmojiMode();
     console.log('*SD-Meet*', 'Room:', this.#currentRoom);
 
     this.#resetButtons();
@@ -515,6 +554,7 @@ class MeetWrapper { // eslint-disable-line
     let emojiIndex = 0;
     // Arbitrary limit 32 for StreamDeck XL
     for (let i = 0; i < 32; i++) {
+      if (!this.#inEmojiMode) break;
       if (i === reactionId) continue;
       if (emojiIndex >= emojis.length) break;
 
@@ -527,13 +567,11 @@ class MeetWrapper { // eslint-disable-line
    * Exit emoji mode and restore standard buttons
    */
   #exitEmojiMode() {
-    this.#inEmojiMode = false;
+    this.#clearEmojiMode();
     this.#resetButtons();
     this.#drawFullScreenButton();
     this.#drawButton('end-call');
     this.#drawMeetingButtons();
-    // Stop watching logic is implicit as the loop in #watchEmojiPanel checks
-    // flag
   }
 
   /**
@@ -541,6 +579,10 @@ class MeetWrapper { // eslint-disable-line
    */
   async #watchEmojiPanel() {
     if (!this.#inEmojiMode) return;
+
+    if (this.#emojiWatchInterval) {
+      clearInterval(this.#emojiWatchInterval);
+    }
 
     // Start watcher
     const bar = this.#getReactionBar();
@@ -555,9 +597,10 @@ class MeetWrapper { // eslint-disable-line
     // Here we just want to catch "open -> closed" transition.
     // Simple poll:
 
-    const checkInterval = setInterval(() => {
+    this.#emojiWatchInterval = setInterval(() => {
       if (!this.#inEmojiMode) {
-        clearInterval(checkInterval);
+        clearInterval(this.#emojiWatchInterval);
+        this.#emojiWatchInterval = null;
         return;
       }
 
@@ -573,7 +616,6 @@ class MeetWrapper { // eslint-disable-line
       const checkBar = this.#getReactionBar();
       if (!checkBar || checkBar.offsetParent === null) {
         this.#exitEmojiMode();
-        clearInterval(checkInterval);
       }
     }, 1000);
   }
@@ -672,9 +714,9 @@ class MeetWrapper { // eslint-disable-line
 
         // Use data-emoji if available, it's the most reliable source.
         if (btn.hasAttribute('data-emoji')) {
-          emojis.push({ label, char: btn.getAttribute('data-emoji') });
+          emojis.push({label, char: btn.getAttribute('data-emoji')});
         } else if (char.trim()) {
-          emojis.push({ label, char: char.trim() });
+          emojis.push({label, char: char.trim()});
         }
       }
     });
@@ -897,8 +939,113 @@ class MeetWrapper { // eslint-disable-line
    *
    * @return {?Element}
    */
+  /**
+   * Find element matching candidate selectors and containing an SVG path
+   * with a given signature prefix or pattern.
+   *
+   * @param {string} selector Candidate elements query.
+   * @param {string} pathPrefix Start of the path data string (d attribute).
+   * @return {?Element}
+   */
+  #findElementBySvgPath(selector, pathPrefix) {
+    const candidates = document.querySelectorAll(selector);
+    for (const el of candidates) {
+      const paths = el.querySelectorAll('svg path');
+      for (const path of paths) {
+        const d = path.getAttribute('d');
+        if (d && d.includes(pathPrefix)) {
+          return el;
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Find element by checking if any of its aria-attributes or tooltips
+   * match a list of regex/substring patterns.
+   *
+   * @param {string} selector Candidate elements query.
+   * @param {Array<string>} patterns Substring patterns to look for.
+   * @param {Array<string>} excludePatterns Substring patterns to exclude.
+   * @return {?Element}
+   */
+  #findElementByAriaPatterns(selector, patterns, excludePatterns = []) {
+    const candidates = document.querySelectorAll(selector);
+    for (const el of candidates) {
+      const ariaLabel = el.getAttribute('aria-label') || '';
+      const tooltip = el.getAttribute('data-tooltip') || '';
+      const matches = patterns.some((pattern) =>
+        ariaLabel.toLowerCase().includes(pattern.toLowerCase()) ||
+        tooltip.toLowerCase().includes(pattern.toLowerCase()),
+      );
+      const excluded = excludePatterns.some((pattern) =>
+        ariaLabel.toLowerCase().includes(pattern.toLowerCase()) ||
+        tooltip.toLowerCase().includes(pattern.toLowerCase()),
+      );
+      if (matches && !excluded) {
+        return el;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Find element by checking if its textContent matches a list of substring
+   * patterns.
+   *
+   * @param {string} selector Candidate elements query.
+   * @param {Array<string>} patterns Substring patterns to look for.
+   * @param {Array<string>} excludePatterns Substring patterns to exclude.
+   * @return {?Element}
+   */
+  #findElementByTextContent(selector, patterns, excludePatterns = []) {
+    const candidates = document.querySelectorAll(selector);
+    for (const el of candidates) {
+      const text = el.textContent || '';
+      const matches = patterns.some((pattern) =>
+        text.toLowerCase().includes(pattern.toLowerCase()),
+      );
+      const excluded = excludePatterns.some((pattern) =>
+        text.toLowerCase().includes(pattern.toLowerCase()),
+      );
+      if (matches && !excluded) {
+        return el;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Get the Start Instant Meeting button (lobby).
+   *
+   * @return {?Element}
+   */
+  /**
+   * Get the Start Instant Meeting button (lobby).
+   *
+   * @return {?Element}
+   */
   #getStartInstantMeetingButton() {
-    return document.querySelector('[jsname=CuSyi]');
+    let btn = document.querySelector('[jsname=CuSyi]');
+    if (btn) return btn;
+
+    btn = this.#findElementBySvgPath('button, [role="button"]', 'M19 13') ||
+          this.#findElementBySvgPath('button, [role="button"]', 'M20 5') ||
+          this.#findElementBySvgPath('button, [role="button"]', 'M19 10');
+    if (btn) return btn;
+
+    btn = this.#findElementByAriaPatterns(
+        'button, [role="button"], [role="menuitem"]',
+        ['instant'],
+    );
+    if (btn) return btn;
+
+    btn = this.#findElementByTextContent(
+        'button, [role="button"], [role="menuitem"]',
+        ['instant', 'réunion instantanée'],
+    );
+    return btn;
   }
 
   /**
@@ -907,7 +1054,24 @@ class MeetWrapper { // eslint-disable-line
    * @return {?Element}
    */
   #getStartNextMeetingButton() {
-    return document.querySelector('[data-default-focus=true]');
+    let btn = document.querySelector('[data-default-focus=true]');
+    if (btn) return btn;
+
+    btn = this.#findElementBySvgPath('button, [role="button"]', 'M19 13') ||
+          this.#findElementBySvgPath('button, [role="button"]', 'M20 5');
+    if (btn) return btn;
+
+    btn = this.#findElementByAriaPatterns(
+        'button, [role="button"]',
+        ['join', 'next', 'suivante'],
+    );
+    if (btn) return btn;
+
+    btn = this.#findElementByTextContent(
+        'button, [role="button"]',
+        ['join', 'next', 'participer', 'suivante'],
+    );
+    return btn;
   }
 
   /**
@@ -916,7 +1080,24 @@ class MeetWrapper { // eslint-disable-line
    * @return {?Element}
    */
   #getEnterMeetingButton() {
-    return document.querySelector('[jsname=Qx7uuf]');
+    let btn = document.querySelector('[jsname=Qx7uuf]');
+    if (btn) return btn;
+
+    btn = this.#findElementBySvgPath('button, [role="button"]', 'M19 13') ||
+          this.#findElementBySvgPath('button, [role="button"]', 'M12 4');
+    if (btn) return btn;
+
+    btn = this.#findElementByAriaPatterns(
+        'button, [role="button"]',
+        ['join', 'ask', 'entrer', 'participer', 'demander'],
+    );
+    if (btn) return btn;
+
+    btn = this.#findElementByTextContent(
+        'button, [role="button"]',
+        ['join', 'ask', 'entrer', 'participer', 'demander'],
+    );
+    return btn;
   }
 
   /**
@@ -934,7 +1115,7 @@ class MeetWrapper { // eslint-disable-line
    * @return {?Element}
    */
   #getMeetingInfoDialogCloseButton() {
-    const dialog = document.querySelector('[jscontroller=Cmkwqf]');
+    const dialog = this.#getMeetingInfoDialog();
     if (dialog) {
       return dialog.querySelector('[aria-label=Close]');
     }
@@ -955,8 +1136,40 @@ class MeetWrapper { // eslint-disable-line
    * @return {?Element}
    */
   #getMicButton() {
-    const sel = '[jscontroller=eB6kvd]';
-    return document.querySelector(sel)?.querySelector('button[data-is-muted]');
+    const primarySel = '[jscontroller=eB6kvd]';
+    let btn = document.querySelector(primarySel)
+        ?.querySelector('button[data-is-muted]');
+    if (btn) return btn;
+
+    btn = this.#findElementBySvgPath('button[data-is-muted]', 'M12 14') ||
+          this.#findElementBySvgPath('button[data-is-muted]', 'M11 5');
+    if (btn) return btn;
+
+    btn = this.#findElementBySvgPath('button', 'M12 14') ||
+          this.#findElementBySvgPath('button', 'M11 5');
+    if (btn) return btn;
+
+    btn = this.#findElementByAriaPatterns(
+        'button[data-is-muted]',
+        ['microphone', 'micro', 'mikro', 'audio', 'mute', 'stummschalten'],
+        [
+          'camera', 'caméra', 'video', 'vidéo',
+          'settings', 'paramètre', 'option', 'einstellung',
+          'config', 'ajustes',
+        ],
+    );
+    if (btn) return btn;
+
+    btn = this.#findElementByAriaPatterns(
+        'button',
+        ['microphone', 'micro', 'mikro', 'audio', 'mute', 'stummschalten'],
+        [
+          'camera', 'caméra', 'video', 'vidéo',
+          'settings', 'paramètre', 'option', 'einstellung',
+          'config', 'ajustes',
+        ],
+    );
+    return btn;
   }
 
   /**
@@ -965,8 +1178,36 @@ class MeetWrapper { // eslint-disable-line
    * @return {?Element}
    */
   #getCamButton() {
-    const sel = '[jscontroller=bwqwSd]';
-    return document.querySelector(sel)?.querySelector('button[data-is-muted]');
+    const primarySel = '[jscontroller=bwqwSd]';
+    let btn = document.querySelector(primarySel)
+        ?.querySelector('button[data-is-muted]');
+    if (btn) return btn;
+
+    btn = this.#findElementBySvgPath('button[data-is-muted]', 'M18 10.48');
+    if (btn) return btn;
+
+    btn = this.#findElementBySvgPath('button', 'M18 10.48');
+    if (btn) return btn;
+
+    btn = this.#findElementByAriaPatterns(
+        'button[data-is-muted]',
+        ['camera', 'caméra', 'kamera', 'video', 'vidéo'],
+        [
+          'settings', 'paramètre', 'option', 'config',
+          'einstellung', 'ajustes',
+        ],
+    );
+    if (btn) return btn;
+
+    btn = this.#findElementByAriaPatterns(
+        'button',
+        ['camera', 'caméra', 'kamera', 'video', 'vidéo'],
+        [
+          'settings', 'paramètre', 'option', 'config',
+          'einstellung', 'ajustes',
+        ],
+    );
+    return btn;
   }
 
   /**
@@ -975,8 +1216,26 @@ class MeetWrapper { // eslint-disable-line
    * @return {?Element}
    */
   #getCCButton() {
-    const sel = '[jscontroller=iBwifb]';
-    return document.querySelector(sel)?.querySelector('button');
+    const primarySel = '[jscontroller=iBwifb]';
+    let btn = document.querySelector(primarySel)?.querySelector('button');
+    if (btn) return btn;
+
+    btn = this.#findElementBySvgPath('button', 'M19.5 5.5') ||
+          this.#findElementBySvgPath('button', 'M19 4H5');
+    if (btn) return btn;
+
+    btn = this.#findElementByAriaPatterns(
+        'button',
+        [
+          'caption', 'sous-titre', 'subtitle',
+          'subtítulo', 'subtitulo', 'untertitel',
+        ],
+        [
+          'settings', 'paramètre', 'option', 'config',
+          'einstellung', 'ajustes',
+        ],
+    );
+    return btn;
   }
 
   /**
@@ -985,8 +1244,24 @@ class MeetWrapper { // eslint-disable-line
    * @return {?Element}
    */
   #getHandButton() {
-    const sel = '[jscontroller=LtjzW]';
-    return document.querySelector(sel)?.querySelector('button');
+    const primarySel = '[jscontroller=LtjzW]';
+    let btn = document.querySelector(primarySel)?.querySelector('button');
+    if (btn) return btn;
+
+    btn = this.#findElementBySvgPath('button', 'M18 24') ||
+          this.#findElementBySvgPath('button', 'M4.14 15.28');
+    if (btn) return btn;
+
+    btn = this.#findElementByAriaPatterns(
+        'button',
+        ['hand', 'main', 'mano'],
+        [
+          'all', 'toutes', 'todos', 'todas', 'moderator',
+          'modérateur', 'host', 'hôte', 'lower all',
+          'baisser toutes', 'bajar todas', 'bajar',
+        ],
+    );
+    return btn;
   }
 
   /**
@@ -995,8 +1270,23 @@ class MeetWrapper { // eslint-disable-line
    * @return {?Element}
    */
   #getStopPresentingButton() {
-    const sel = '[jsname=aK5XXd]';
-    return document.querySelector(sel);
+    const primarySel = '[jsname=aK5XXd]';
+    let btn = document.querySelector(primarySel);
+    if (btn) return btn;
+
+    btn = this.#findElementBySvgPath('button', 'M21 3');
+    if (btn) return btn;
+
+    btn = this.#findElementByAriaPatterns(
+        'button',
+        ['present', 'présent', 'share', 'partage', 'stop'],
+        [
+          'recording', 'enregistrement', 'video', 'vidéo',
+          'stream', 'camera', 'caméra', 'mic',
+          'microphone', 'sharing settings',
+        ],
+    );
+    return btn;
   }
 
   /**
@@ -1006,7 +1296,22 @@ class MeetWrapper { // eslint-disable-line
    */
   #getInfoButton() {
     const sel = 'button[data-panel-id="5"]';
-    return document.querySelector(sel);
+    let btn = document.querySelector(sel);
+    if (btn) return btn;
+
+    btn = this.#findElementBySvgPath('button', 'M11 17') ||
+          this.#findElementBySvgPath('button', 'M12 2C') ||
+          this.#findElementBySvgPath('button', 'M12 9');
+    if (btn) return btn;
+
+    btn = this.#findElementByAriaPatterns(
+        'button',
+        [
+          'info', 'details', 'détails', 'meeting details',
+          'informations sur la réunion', 'detalles',
+        ],
+    );
+    return btn;
   }
 
   /**
@@ -1016,7 +1321,22 @@ class MeetWrapper { // eslint-disable-line
    */
   #getPeopleButton() {
     const sel = 'button[data-panel-id="1"]';
-    return document.querySelector(sel);
+    let btn = document.querySelector(sel);
+    if (btn) return btn;
+
+    btn = this.#findElementBySvgPath('button', 'M9 8c') ||
+          this.#findElementBySvgPath('button', 'M12 6') ||
+          this.#findElementBySvgPath('button', 'M16 11');
+    if (btn) return btn;
+
+    btn = this.#findElementByAriaPatterns(
+        'button',
+        [
+          'people', 'participants', 'utilisateurs', 'membres',
+          'show everyone', 'afficher tous les participants',
+        ],
+    );
+    return btn;
   }
 
   /**
@@ -1026,7 +1346,23 @@ class MeetWrapper { // eslint-disable-line
    */
   #getChatButton() {
     const sel = 'button[data-panel-id="2"]';
-    return document.querySelector(sel);
+    let btn = document.querySelector(sel);
+    if (btn) return btn;
+
+    btn = this.#findElementBySvgPath('button', 'M20 2H4') ||
+          this.#findElementBySvgPath('button', 'M20 2c') ||
+          this.#findElementBySvgPath('button', 'M21 15') ||
+          this.#findElementBySvgPath('button', 'M18 15');
+    if (btn) return btn;
+
+    btn = this.#findElementByAriaPatterns(
+        'button',
+        [
+          'chat', 'discussion', 'clavier', 'messagerie',
+          'chat with everyone', 'discuter avec tout le monde',
+        ],
+    );
+    return btn;
   }
 
   /**
@@ -1036,7 +1372,21 @@ class MeetWrapper { // eslint-disable-line
    */
   #getActivitiesButton() {
     const sel = 'button[data-panel-id="10"]';
-    return document.querySelector(sel);
+    let btn = document.querySelector(sel);
+    if (btn) return btn;
+
+    btn = this.#findElementBySvgPath('button', 'M12 2l') ||
+          this.#findElementBySvgPath('button', 'M12 2L');
+    if (btn) return btn;
+
+    btn = this.#findElementByAriaPatterns(
+        'button',
+        [
+          'activities', 'activités', 'animation',
+          'greffons', 'actividades',
+        ],
+    );
+    return btn;
   }
 
   /**
@@ -1045,17 +1395,17 @@ class MeetWrapper { // eslint-disable-line
    * @return {?Element}
    */
   #getReactionButton() {
-    // Try specific controller first
-    const sel = '[jscontroller=M3NJxf]';
-    let btn = document.querySelector(sel)?.querySelector('button');
+    const primarySel = '[jscontroller=M3NJxf]';
+    let btn = document.querySelector(primarySel)?.querySelector('button');
     if (btn) return btn;
 
-    // Fallback: Try aria-label (English)
-    btn = document.querySelector('button[aria-label="Send a reaction"]');
+    btn = this.#findElementBySvgPath('button', 'M15.5 11');
     if (btn) return btn;
 
-    // Fallback: Try aria-label (French - guessed)
-    btn = document.querySelector('button[aria-label="Envoyer une réaction"]');
+    btn = this.#findElementByAriaPatterns(
+        'button',
+        ['reaction', 'réaction', 'emoji'],
+    );
     return btn;
   }
 
@@ -1065,12 +1415,10 @@ class MeetWrapper { // eslint-disable-line
    * @return {?Element}
    */
   #getReactionBar() {
-    // Try specific controller first
     const sel = '[jscontroller=tdX73b]';
     let bar = document.querySelector(sel);
     if (bar) return bar;
 
-    // Fallback: Try finding via aria-controls of the button
     const btn = this.#getReactionButton();
     if (btn) {
       const controlsId = btn.getAttribute('aria-controls');
@@ -1080,16 +1428,14 @@ class MeetWrapper { // eslint-disable-line
       }
     }
 
-    // Fallback: Look for a container that has reaction buttons
-    // Look for a known emoji like '💖' or 'Sparkle'
     const sparkleBtn = document.querySelector('button[aria-label="Sparkle"]');
     if (sparkleBtn) {
       return sparkleBtn.closest('[role="dialog"]') || sparkleBtn.closest('div');
     }
 
-    // Fallback: Explicit toolbar role with aria-label provided by user
     const toolbar = document.querySelector(
-      '[role="toolbar"][aria-label="Send a reaction"]');
+        '[role="toolbar"][aria-label="Send a reaction"]',
+    );
     if (toolbar) return toolbar;
 
     return null;
@@ -1121,8 +1467,18 @@ class MeetWrapper { // eslint-disable-line
    * @return {?Element}
    */
   #getHangupButton() {
-    const sel = '[jscontroller=m1IMT]';
-    return document.querySelector(sel)?.querySelector('button');
+    const primarySel = '[jscontroller=m1IMT]';
+    let btn = document.querySelector(primarySel)?.querySelector('button');
+    if (btn) return btn;
+
+    btn = this.#findElementBySvgPath('button', 'M23.62 11.27');
+    if (btn) return btn;
+
+    btn = this.#findElementByAriaPatterns(
+        'button',
+        ['leave', 'hang', 'quitter', 'raccrocher', 'call'],
+    );
+    return btn;
   }
 
   /**
@@ -1131,8 +1487,25 @@ class MeetWrapper { // eslint-disable-line
    * @return {?Element}
    */
   #getGreenRoomMicButton() {
-    const sel = '[jscontroller=t2mBxb]';
-    return document.querySelector(sel)?.querySelector('[role=button]');
+    const primarySel = '[jscontroller=t2mBxb]';
+    let btn = document.querySelector(primarySel)
+        ?.querySelector('[role=button]');
+    if (btn) return btn;
+
+    btn = this.#findElementBySvgPath('[role="button"], button', 'M12 14') ||
+          this.#findElementBySvgPath('[role="button"], button', 'M11 5');
+    if (btn) return btn;
+
+    btn = this.#findElementByAriaPatterns(
+        '[role="button"], button',
+        ['microphone', 'micro', 'mikro', 'audio', 'mute', 'stummschalten'],
+        [
+          'camera', 'caméra', 'video', 'vidéo',
+          'settings', 'paramètre', 'option', 'einstellung',
+          'config', 'ajustes',
+        ],
+    );
+    return btn;
   }
 
   /**
@@ -1141,8 +1514,23 @@ class MeetWrapper { // eslint-disable-line
    * @return {?Element}
    */
   #getGreenRoomCamButton() {
-    const sel = '[jscontroller=bwqwSd]';
-    return document.querySelector(sel)?.querySelector('[role=button]');
+    const primarySel = '[jscontroller=bwqwSd]';
+    let btn = document.querySelector(primarySel)
+        ?.querySelector('[role=button]');
+    if (btn) return btn;
+
+    btn = this.#findElementBySvgPath('[role="button"], button', 'M18 10.48');
+    if (btn) return btn;
+
+    btn = this.#findElementByAriaPatterns(
+        '[role="button"], button',
+        ['camera', 'caméra', 'kamera', 'video', 'vidéo'],
+        [
+          'settings', 'paramètre', 'option', 'config',
+          'einstellung', 'ajustes',
+        ],
+    );
+    return btn;
   }
 
   /**
@@ -1151,8 +1539,25 @@ class MeetWrapper { // eslint-disable-line
    * @return {?Element}
    */
   #getRejoinButton() {
-    const sel = '[jsname=oI7Fj] button';
-    return document.querySelector(sel);
+    const primarySel = '[jsname=oI7Fj] button';
+    let btn = document.querySelector(primarySel);
+    if (btn) return btn;
+
+    btn = this.#findElementBySvgPath('button, [role="button"]', 'M12 6v') ||
+          this.#findElementBySvgPath('button, [role="button"]', 'M12 5');
+    if (btn) return btn;
+
+    btn = this.#findElementByAriaPatterns(
+        'button, [role="button"]',
+        ['rejoin', 'se reconnecter', 'recommencer'],
+    );
+    if (btn) return btn;
+
+    btn = this.#findElementByTextContent(
+        'button, [role="button"]',
+        ['rejoin', 'se reconnecter', 'recommencer'],
+    );
+    return btn;
   }
 
   /**
@@ -1161,8 +1566,25 @@ class MeetWrapper { // eslint-disable-line
    * @return {?Element}
    */
   #getReturnToHomeButton() {
-    const sel = '[jsname=WIVZEd] button';
-    return document.querySelector(sel);
+    const primarySel = '[jsname=WIVZEd] button';
+    let btn = document.querySelector(primarySel);
+    if (btn) return btn;
+
+    btn = this.#findElementBySvgPath('button, [role="button"]', 'M10 20') ||
+          this.#findElementBySvgPath('button, [role="button"]', 'M10 19');
+    if (btn) return btn;
+
+    btn = this.#findElementByAriaPatterns(
+        'button, [role="button"]',
+        ['home', 'accueil', 'écran d\'accueil', 'principal'],
+    );
+    if (btn) return btn;
+
+    btn = this.#findElementByTextContent(
+        'button, [role="button"]',
+        ['home', 'accueil', 'écran d\'accueil', 'principal'],
+    );
+    return btn;
   }
 
   /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -1356,5 +1778,71 @@ class MeetWrapper { // eslint-disable-line
   #tapHome() {
     const button = this.#getReturnToHomeButton();
     this.#tapButtonWrapper(button, 'returnToHome');
+  }
+
+  /**
+   * Clear emoji mode state and the watch interval.
+   */
+  #clearEmojiMode() {
+    this.#inEmojiMode = false;
+    if (this.#emojiWatchInterval) {
+      clearInterval(this.#emojiWatchInterval);
+      this.#emojiWatchInterval = null;
+    }
+  }
+
+  /**
+   * Redraw the current room setup on the Stream Deck.
+   */
+  #redrawCurrentRoom() {
+    if (!this.#streamDeck?.isConnected) {
+      return;
+    }
+    this.#resetButtons();
+    this.#drawFullScreenButton();
+    if (this.#currentRoom === this.#ROOM_NAMES.lobby) {
+      this.#drawButton(`start-next`);
+      this.#drawButton(`start-instant`);
+    } else if (this.#currentRoom === this.#ROOM_NAMES.greenRoom) {
+      this.#drawButton(`enter-meeting`);
+      this.#drawButton(`home`);
+      this.#updateGreenRoomMicButton();
+      this.#updateGreenRoomCamButton();
+    } else if (this.#currentRoom === this.#ROOM_NAMES.meeting) {
+      this.#drawButton(`end-call`);
+      this.#drawMeetingButtons();
+    } else if (this.#currentRoom === this.#ROOM_NAMES.exitHall) {
+      this.#drawButton(`rejoin`);
+      this.#drawButton(`home`);
+    }
+  }
+
+  /**
+   * Retry setup logic at intervals until conditions are met or timeout is
+   * reached.
+   *
+   * @param {string} roomName Name of the room checking for
+   * @param {Function} checkFn Function returning boolean if elements are ready
+   * @param {Function} setupFn Function executing final observer/drawing setup
+   * @param {number} [maxAttempts=50] Maximum number of check attempts
+   * @param {number} [intervalMs=100] Interval between checks in milliseconds
+   */
+  #retrySetup(roomName, checkFn, setupFn, maxAttempts = 50, intervalMs = 100) {
+    let attempts = 0;
+    const interval = setInterval(() => {
+      if (this.#currentRoom !== roomName) {
+        clearInterval(interval);
+        return;
+      }
+      if (checkFn()) {
+        clearInterval(interval);
+        setupFn();
+      } else if (attempts >= maxAttempts) {
+        clearInterval(interval);
+        console.warn('*SD-Meet*', `Failed to find elements for room ${roomName} after ${maxAttempts} attempts`);
+        setupFn();
+      }
+      attempts++;
+    }, intervalMs);
   }
 }
