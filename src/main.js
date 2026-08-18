@@ -21,12 +21,26 @@
 const streamDeck = new StreamDeck();
 const sdConnectButtonID = 'streamDeckHelperConnect';
 
+// Google Meet's home/lobby page has moved over time: it used to be
+// served from / and /landing, and is now served from /home.
+const LOBBY_PATHS = ['/', '/landing', '/home'];
+
+
+/**
+ * Check if the current URL is one of the known lobby (home) pages.
+ *
+ * @return {boolean} True if on a lobby page.
+ */
+function isLobbyPath() {
+  return LOBBY_PATHS.includes(window.location.pathname);
+}
+
 
 /**
  * Adds a Connect to StreamDeck button to the page.
  */
 function addConnectButton() {
-  if (window.location.pathname !== '/' && window.location.pathname !== '/landing') {
+  if (!isLobbyPath()) {
     return;
   }
   const elem = document.createElement('button');

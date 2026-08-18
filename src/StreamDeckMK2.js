@@ -20,67 +20,70 @@
 
 /**
  *
- * @module StreamDeckMini
+ * @module StreamDeckMK2
  */
-class StreamDeckMini { // eslint-disable-line
-  static PRODUCT_ID = 0x0063;
+class StreamDeckMK2 { // eslint-disable-line
+  static PRODUCT_ID = 0x0080;
 
   /*
-    2 rows with 3 buttons
-    Top Left =  (unknown),
-    Bottom Right = (unknown)
+    3 rows with 5 buttons
+    Top Left =  0,
+    Bottom Right = 14
   */
 
   buttonNameToIdMap = {
+    // All rooms
+    'fullscreen-on': 2,
+    'fullscreen-off': 2,
+    'fullscreen-disabled': 2,
+
     // Lobby
-    // Temporarily disabled (see MeetWrapper.js #tapLobbyTab):
-    // 'select': -1, // no slot on the Mini
-    // 'tab': -1,    // no slot on the Mini
-    // 'join-previous': -1, // replaced by select/tab
-    'start-instant': 6,
     'start-next': 5,
+    'start-instant': 6,
 
     // Green Room
-    'cam': 1,
-    'cam-disabled': 1,
-    'enter-meeting': 6,
-    'mic': 4,
-    'mic-disabled': 4,
+    'enter-meeting': 5,
+    'mic': 10,
+    'mic-disabled': 10,
+    'cam': 11,
+    'cam-disabled': 11,
 
     // Meeting
-    // 'adjust-view': -1,  // Temporarily disabled (see MeetWrapper.js).
-    'escape': -1,
-    'cc': -1,
-    'cc-on': -1,
-    'reaction': 6,
-    'reaction-open': 6,
-    'chat': 3,
-    'chat-open': 3,
-    'end-call': -1,
-    'hand': 5,
-    'hand-raised': 5,
-    'present-stop': -1,
-    'blank': -1,
-    'users': 2,
-    'users-open': 2,
+    'reaction': 0,
+    'reaction-open': 0,
+    'adjust-view': 4,
+    'info': 5,
+    'info-open': 5,
+    'users': 6,
+    'users-open': 6,
+    'cc': 7,
+    'cc-on': 7,
+    'activities': 8,
+    'activities-open': 8,
+    'present-stop': 9,
+    'blank': 9,
+    'chat': 12,
+    'chat-open': 12,
+    'hand': 13,
+    'hand-raised': 13,
+    'end-call': 14,
 
     // Exit Hall
-    'home': 1,
-    'rejoin': 6,
+    'home': 14,
+    'rejoin': 10,
   };
 
-  OFFSET = 1;
-  ID_OFFSET = 1;
-  NUM_KEYS = 6;
-  ICON_SIZE = 80;
+  OFFSET = 4;
+  ID_OFFSET = 0;
+  NUM_KEYS = 15;
+  ICON_SIZE = 72;
   ICON_SIZE_HALF = this.ICON_SIZE / 2;
-  IMAGE_ROTATION = -90;
+  IMAGE_ROTATION = 180;
   HRZFLIP = 0;
 
   #PACKET_SIZE = 1024;
-  #PACKET_HEADER_LENGTH = 16;
+  #PACKET_HEADER_LENGTH = 8;
   #MAX_PAYLOAD_LENGTH = this.#PACKET_SIZE - this.#PACKET_HEADER_LENGTH;
-
 
   /**
    * Constructor
@@ -107,9 +110,8 @@ class StreamDeckMini { // eslint-disable-line
    * @return {?Promise<ArrayBuffer>}
    */
   async reset(device) {
-    const arr = [0x63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-    const data = new Uint8Array(arr);
-    return device.sendFeatureReport(0x0b, data);
+    const data = new Uint8Array([0x02]);
+    return device.sendFeatureReport(0x03, data);
   }
 
   /**
@@ -119,20 +121,8 @@ class StreamDeckMini { // eslint-disable-line
    * @return {Promise<ArrayBuffer>}
    */
   async getImageBufferFromCanvas(canvas) {
-    const blob = CanvasToBMP.toBlob(canvas, false, false);
-
+    const blob = await canvas.convertToBlob({type: 'image/jpeg', quality: 1.0});
     const buff = await blob.arrayBuffer();
-
-    /*
-    // For debugging, write out a file
-    const directoryHandle = await window.showDirectoryPicker();
-    const opts = {create: true};
-    const fileHandle = await directoryHandle.getFileHandle('temp.bmp', opts);
-    const writable = await fileHandle.createWritable();
-    await writable.write({type: 'write', data: buff});
-    await writable.close();
-    */
-
     return buff;
   }
 
@@ -156,18 +146,19 @@ class StreamDeckMini { // eslint-disable-line
       const header = new ArrayBuffer(this.#PACKET_HEADER_LENGTH);
 
       new DataView(header).setUint8(0, 0x02); // report ID
-      new DataView(header).setUint8(1, 0x01); // always 1 - set the icon
-      new DataView(header).setUint16(2, page++, true);
-      new DataView(header).setUint8(4, isLastPacket ? 1 : 0); // is last packet
-      new DataView(header).setUint8(5, buttonId); // button
-      // leave the rest zero
+      new DataView(header).setUint8(1, 0x07); // always 7 - set the icon
+      new DataView(header).setUint8(2, buttonId); // button
+      new DataView(header).setUint8(3, isLastPacket ? 1 : 0); // is last packet
+      new DataView(header).setUint16(4, byteCount, true);
+      new DataView(header).setUint16(6, page++, true);
 
       const end = start + byteCount;
       const packet = new Uint8Array(this.#PACKET_SIZE);
       packet.set(new Uint8Array(header));
       packet.set(
           new Uint8Array(buffer.slice(start, end)),
-          this.#PACKET_HEADER_LENGTH);
+          this.#PACKET_HEADER_LENGTH,
+      );
 
       start = end;
       bytesRemaining = bytesRemaining - byteCount;

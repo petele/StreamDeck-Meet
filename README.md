@@ -1,6 +1,11 @@
 # Meet + StreamDeck Helper
 
-Last Updated: 2021-09-30
+Last Updated: 2026-08-18
+Updated to support Google's [Meet homepage redesign](https://workspaceupdates.googleblog.com/2026/07/a-centralized-hub-for-meeting-resources-on-the-new-Google-Meet-homepage.html) and also fix some ever broken buttons along the way. Open-weight LLM models assisted in this update.
+
+I left some stub code in place for future feature additions.
+- Adjust view toggle in-meeting (auto <-> spotlight)
+- Tab/enter buttons to access previous meetings now surfaced on the new Meet homepage.
 
 ## The problem
 
